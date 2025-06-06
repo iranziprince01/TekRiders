@@ -4,6 +4,24 @@ import { useTranslation } from 'react-i18next';
 
 const Signup = () => {
   const { t } = useTranslation();
+  const submit = async e => {
+    e.preventDefault();
+    const email = e.target.elements['signup-email'].value;
+    const password = e.target.elements['signup-password'].value;
+    const role = e.target.elements['signup-role'].value;
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, role })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert('Registered successfully');
+      window.location.href = '/login';
+    } else {
+      alert(data.message || 'Signup failed');
+    }
+  };
   return (
     <>
       <div className="auth-bg d-flex align-items-center justify-content-center min-vh-100" style={{background: 'linear-gradient(120deg, #e6f6fc 60%, #fafdff 100%)'}}>
@@ -11,7 +29,7 @@ const Signup = () => {
           <div className="text-center mb-4">
             <h2 className="h4 mt-3 mb-2" style={{fontWeight: 700}}>{t('Sign Up')}</h2>
           </div>
-          <form autoComplete="off">
+          <form autoComplete="off" onSubmit={submit}>
             <div className="mb-3">
               <input type="email" className="form-control form-control-lg" id="signup-email" placeholder={t('Email')} required />
             </div>

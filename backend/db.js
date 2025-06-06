@@ -29,11 +29,12 @@ nanoInstance.db.list()
     console.error('CouchDB connection error:', err);
   });
 
-// Get users database
+// Get databases
 const usersDb = nanoInstance.db.use('users');
+const coursesDb = nanoInstance.db.use('courses');
 
-// Ensure users database exists
-const ensureUsersDb = async () => {
+// Ensure databases exist
+const ensureDbs = async () => {
   try {
     await usersDb.info();
     console.log('Users database exists and is accessible');
@@ -46,9 +47,22 @@ const ensureUsersDb = async () => {
       console.error('Error checking/creating users database:', err);
     }
   }
+
+  try {
+    await coursesDb.info();
+    console.log('Courses database exists and is accessible');
+  } catch (err) {
+    if (err.statusCode === 404) {
+      console.log('Creating courses database...');
+      await nanoInstance.db.create('courses');
+      console.log('Courses database created');
+    } else {
+      console.error('Error checking/creating courses database:', err);
+    }
+  }
 };
 
-// Call ensureUsersDb when the module loads
-ensureUsersDb();
+// Call ensureDbs when the module loads
+ensureDbs();
 
-module.exports = { nanoInstance, usersDb }; 
+module.exports = { nanoInstance, usersDb, coursesDb };
