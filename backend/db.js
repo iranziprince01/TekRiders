@@ -11,7 +11,7 @@ const couchPass = process.env.COUCHDB_PASS;
 
 // Create authenticated nano instance
 const nanoInstance = nano({
-  url: `http://${couchUrl}`,
+  url: couchUrl,
   requestDefaults: {
     auth: {
       username: couchUser,

@@ -17,7 +17,7 @@ class User {
           email: email
         },
         use_index: ['email-index'],
-        fields: ['_id', '_rev', 'email', 'password', 'role']
+        fields: ['_id', '_rev', 'email', 'password', 'role', 'resetToken', 'resetTokenExpiry']
       };
       
       const result = await usersDb.find(query);
@@ -61,7 +61,9 @@ class User {
         updatedUser.password = await bcrypt.hash(updates.password, 10);
       }
 
+      console.log('Updating user document:', { id, updates, updatedUser });
       const result = await usersDb.insert(updatedUser);
+      console.log('User document updated result:', result);
       return {
         _id: result.id,
         _rev: result.rev,

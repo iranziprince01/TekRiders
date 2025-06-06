@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
 import { useTranslation } from 'react-i18next';
+import { useState } from 'react';
 
 const Login = () => {
   const { t } = useTranslation();
+  const [showPassword, setShowPassword] = useState(false);
+  const [password, setPassword] = useState('');
   const submit = async e => {
     e.preventDefault();
     const email = e.target.elements['login-email'].value;
@@ -33,8 +36,11 @@ const Login = () => {
             <div className="mb-3">
               <input type="email" className="form-control form-control-lg" id="login-email" placeholder={t('Email')} required />
             </div>
-            <div className="mb-3">
-              <input type="password" className="form-control form-control-lg" id="login-password" placeholder={t('Password')} required />
+            <div className="mb-3 position-relative">
+              <input type={showPassword ? 'text' : 'password'} className="form-control form-control-lg" id="login-password" placeholder={t('Password')} required value={password} onChange={e => setPassword(e.target.value)} />
+              <span onClick={() => setShowPassword(v => !v)} style={{position:'absolute',right:16,top:14,cursor:'pointer',fontSize:'1.2rem',color:'#399ff7'}} title={showPassword ? 'Hide' : 'Show'}>
+                {showPassword ? '🙈' : '👁️'}
+              </span>
             </div>
             <div className="d-flex justify-content-end mb-2">
               <Link to="/forgot-password" className="footer-link small" style={{color: 'var(--main-color)', textDecoration: 'underline'}}>{t('Forgot Password')}?</Link>
