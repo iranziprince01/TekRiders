@@ -3,34 +3,31 @@ import Footer from '../components/Footer';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import PhoneInput from 'react-phone-input-2';
+import { useAuth } from '../contexts/AuthContext';
 import 'react-phone-input-2/lib/style.css';
 
 const Login = () => {
   const { t } = useTranslation();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState('');
   const [identifier, setIdentifier] = useState('');
   const [identifierType, setIdentifierType] = useState('email'); // 'email' or 'phone'
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const submit = async e => {
     e.preventDefault();
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        identifier,
-        identifierType,
-        password 
-      })
-    });
-    const data = await res.json();
-    if (res.ok) {
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('role', data.user.role);
-      window.location.href = '/dashboard';
-    } else {
-      alert(data.message || 'Login failed');
+    setError('');
+    setLoading(true);
+    
+    const result = await login(identifier, identifierType, password);
+    
+    if (!result.success) {
+      setError(result.message);
     }
+    
+    setLoading(false);
   };
 
   return (
@@ -104,7 +101,15 @@ const Login = () => {
             <div className="d-flex justify-content-end mb-2">
               <Link to="/forgot-password" className="footer-link small" style={{color: 'var(--main-color)', textDecoration: 'underline'}}>{t('Forgot Password')}?</Link>
             </div>
-            <button type="submit" className="btn btn-primary w-100 py-2 mt-2" style={{fontWeight: 600}}>{t('Log In')}</button>
+            {error && <div className="alert alert-danger">{error}</div>}
+            <button 
+              type="submit" 
+              className="btn btn-primary w-100 py-2 mt-2" 
+              style={{fontWeight: 600}}
+              disabled={loading}
+            >
+              {loading ? t('Logging in...') : t('Log In')}
+            </button>
           </form>
           <div className="text-center mt-3">
             <span className="text-muted">{t("Don't have an account?")} </span>

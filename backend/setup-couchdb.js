@@ -94,6 +94,6 @@ async function setupCouchDB() {
 }
 
 // Run the setup
-setupCouchDB();
+setupCouchDB(); 
 
 module.exports = setupCouchDB; 

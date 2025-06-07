@@ -37,10 +37,6 @@ const Header = () => {
               {t('En')}
             </button>
           </div>
-          {/* Get Started Button */}
-          <Link to="/signup" className="btn btn-primary px-4 fw-semibold get-started-animate">
-            {t('Start Learning')}
-          </Link>
         </div>
       </nav>
     </header>

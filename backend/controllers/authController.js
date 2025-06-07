@@ -25,8 +25,8 @@ exports.register = async (req, res) => {
     if (email) {
       const existingEmail = await User.findByEmail(email);
       if (existingEmail) {
-        return res.status(409).json({ message: 'Email already exists.' });
-      }
+      return res.status(409).json({ message: 'Email already exists.' });
+    }
     }
     
     // Check if phone exists
@@ -88,7 +88,7 @@ exports.login = async (req, res) => {
     res.json({ 
       token, 
       user: { 
-        email: user.email,
+        email: user.email, 
         phone: user.phone,
         role: user.role 
       } 
@@ -109,7 +109,7 @@ exports.forgotPassword = async (req, res) => {
   if (!identifier || !identifierType) {
     return res.status(400).json({ message: 'Identifier (email/phone) and identifier type are required.' });
   }
-
+  
   try {
     let user;
     if (identifierType === 'email') {
@@ -123,7 +123,7 @@ exports.forgotPassword = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'No user found with that identifier.' });
     }
-
+    
     // Generate a reset token and expiry (1 hour)
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetTokenExpiry = Date.now() + 3600000; // 1 hour
