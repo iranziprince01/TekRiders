@@ -53,7 +53,7 @@ async function setupCouchDB() {
 
     // 3. Create index for email field
     console.log('\nCreating index for email field...');
-    const index = {
+    const emailIndex = {
       index: {
         fields: ['email']
       },
@@ -61,10 +61,23 @@ async function setupCouchDB() {
       type: 'json'
     };
 
-    await usersDb.createIndex(index);
+    await usersDb.createIndex(emailIndex);
     console.log('Email index created');
 
-    // 4. Verify index creation
+    // 4. Create index for phone field
+    console.log('\nCreating index for phone field...');
+    const phoneIndex = {
+      index: {
+        fields: ['phone']
+      },
+      name: 'phone-index',
+      type: 'json'
+    };
+
+    await usersDb.createIndex(phoneIndex);
+    console.log('Phone index created');
+
+    // 5. Verify index creation
     console.log('\nVerifying indexes...');
     const indexes = await usersDb.listIndexes();
     console.log('Available indexes:', indexes);
@@ -81,4 +94,6 @@ async function setupCouchDB() {
 }
 
 // Run the setup
-setupCouchDB(); 
+setupCouchDB();
+
+module.exports = setupCouchDB; 

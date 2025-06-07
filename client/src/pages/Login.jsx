@@ -2,19 +2,26 @@ import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 
 const Login = () => {
   const { t } = useTranslation();
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState('');
+  const [identifier, setIdentifier] = useState('');
+  const [identifierType, setIdentifierType] = useState('email'); // 'email' or 'phone'
+
   const submit = async e => {
     e.preventDefault();
-    const email = e.target.elements['login-email'].value;
-    const password = e.target.elements['login-password'].value;
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ 
+        identifier,
+        identifierType,
+        password 
+      })
     });
     const data = await res.json();
     if (res.ok) {
@@ -25,6 +32,7 @@ const Login = () => {
       alert(data.message || 'Login failed');
     }
   };
+
   return (
     <>
       <div className="auth-bg d-flex align-items-center justify-content-center min-vh-100" style={{background: 'linear-gradient(120deg, #e6f6fc 60%, #fafdff 100%)'}}>
@@ -34,11 +42,62 @@ const Login = () => {
           </div>
           <form autoComplete="off" onSubmit={submit}>
             <div className="mb-3">
-              <input type="email" className="form-control form-control-lg" id="login-email" placeholder={t('Email')} required />
+              <div className="btn-group w-100 mb-2" role="group">
+                <button 
+                  type="button" 
+                  className={`btn ${identifierType === 'email' ? 'btn-primary' : 'btn-outline-primary'}`}
+                  onClick={() => setIdentifierType('email')}
+                >
+                  {t('Email')}
+                </button>
+                <button 
+                  type="button" 
+                  className={`btn ${identifierType === 'phone' ? 'btn-primary' : 'btn-outline-primary'}`}
+                  onClick={() => setIdentifierType('phone')}
+                >
+                  {t('Phone')}
+                </button>
+              </div>
+              {identifierType === 'email' ? (
+                <input 
+                  type="email" 
+                  className="form-control form-control-lg" 
+                  placeholder={t('Email')} 
+                  required 
+                  value={identifier}
+                  onChange={e => setIdentifier(e.target.value)}
+                />
+              ) : (
+                <PhoneInput
+                  country={'rw'}
+                  value={identifier}
+                  onChange={phone => setIdentifier(phone)}
+                  inputClass="form-control form-control-lg"
+                  containerClass="phone-input-container"
+                  buttonClass="phone-input-button"
+                  dropdownClass="phone-input-dropdown"
+                  searchClass="phone-input-search"
+                  inputProps={{
+                    required: true,
+                    placeholder: t('Phone Number')
+                  }}
+                />
+              )}
             </div>
             <div className="mb-3 position-relative">
-              <input type={showPassword ? 'text' : 'password'} className="form-control form-control-lg" id="login-password" placeholder={t('Password')} required value={password} onChange={e => setPassword(e.target.value)} />
-              <span onClick={() => setShowPassword(v => !v)} style={{position:'absolute',right:16,top:14,cursor:'pointer',fontSize:'1.2rem',color:'#399ff7'}} title={showPassword ? 'Hide' : 'Show'}>
+              <input 
+                type={showPassword ? 'text' : 'password'} 
+                className="form-control form-control-lg" 
+                placeholder={t('Password')} 
+                required 
+                value={password} 
+                onChange={e => setPassword(e.target.value)} 
+              />
+              <span 
+                onClick={() => setShowPassword(v => !v)} 
+                style={{position:'absolute',right:16,top:14,cursor:'pointer',fontSize:'1.2rem',color:'#399ff7'}} 
+                title={showPassword ? 'Hide' : 'Show'}
+              >
                 {showPassword ? '🙈' : '👁️'}
               </span>
             </div>
