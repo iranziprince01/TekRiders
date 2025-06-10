@@ -25,6 +25,74 @@ A Progressive Web Application (PWA) for e-learning, built with React and Node.js
 - Docker and Docker Compose (for containerized development)
 - CouchDB (if running locally)
 
+## CouchDB Database Schema
+
+This project uses CouchDB as its primary database. Below are the main document types and their default schema:
+
+### 1. Users (`users` database)
+Each user document typically contains:
+```json
+{
+  "_id": "string",           // CouchDB document ID
+  "type": "user",            // Document type
+  "email": "string",         // User email (unique)
+  "phone": "string",         // User phone (unique)
+  "password": "string",      // Hashed password
+  "role": "string",          // 'tutor', 'learner', or 'admin'
+  "name": "string",          // User's full name (optional)
+  "avatar": "string",        // URL to avatar image (optional)
+  "settings": {               // User settings (optional, dynamic)
+    // e.g., notification preferences, language, etc.
+  },
+  "createdAt": "ISODate",
+  "updatedAt": "ISODate"     // (optional)
+}
+```
+- **Indexes:**
+  - `email` (for login)
+  - `phone` (for login)
+
+### 2. Courses (`courses` database)
+Each course document typically contains:
+```json
+{
+  "_id": "string",           // CouchDB document ID
+  "type": "course",          // Document type
+  "title": "string",         // Course title
+  "description": "string",   // Course description
+  "status": "string",        // 'pending', 'approved', 'rejected'
+  "instructorId": "string",  // Reference to user _id
+  "category": "string",      // e.g., 'Coding', 'General IT', 'Business Tech'
+  "contentType": "string",   // 'Video', 'Audio', 'Doc'
+  "lessons": [                // Array of lesson objects
+    {
+      "title": "string",
+      "description": "string",
+      "fileUrl": "string"    // URL to uploaded file (if applicable)
+    }
+  ],
+  "createdAt": "ISODate"
+}
+```
+
+### 3. Notifications (`notifications` database)
+Each notification document typically contains:
+```json
+{
+  "_id": "string",           // CouchDB document ID
+  "recipient": "string",     // User _id
+  "message": "string",       // Notification message
+  "type": "string",          // e.g., 'info', 'warning', 'success'
+  "read": false,              // Boolean read status
+  "createdAt": "ISODate"
+}
+```
+
+### Notes
+- All documents include CouchDB's default fields: `_id`, `_rev`.
+- User settings are stored as a nested object in the user document and can be extended as needed.
+- Additional document types (e.g., for analytics, admin logs) can be added as needed.
+
 ## Getting Started
 
 ### Local Development

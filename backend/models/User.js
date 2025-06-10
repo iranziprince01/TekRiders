@@ -1,4 +1,4 @@
-const { usersDb } = require('../db');
+const { users: usersDb } = require('../db');
 const bcrypt = require('bcryptjs');
 
 class User {

@@ -65,4 +65,8 @@ const ensureDbs = async () => {
 // Call ensureDbs when the module loads
 ensureDbs();
 
-module.exports = { nanoInstance, usersDb, coursesDb };
+module.exports = {
+  nanoInstance,
+  users: usersDb,
+  courses: coursesDb
+};

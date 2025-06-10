@@ -1,72 +1,38 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import { FiEdit2, FiAward, FiBook, FiClock, FiStar, FiSettings } from 'react-icons/fi';
 
 const UserProfile = () => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ name: user?.name || '', email: user?.email || '', bio: user?.bio || '', avatar: user?.avatar || '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  // Mock data - replace with API call
-  const user = {
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    avatar: 'https://ui-avatars.com/api/?name=John+Doe&size=200',
-    role: 'Student',
-    joinDate: 'January 2024',
-    bio: 'Passionate about learning and technology. Currently focusing on web development and programming.',
-    stats: {
-      coursesEnrolled: 5,
-      coursesCompleted: 3,
-      certificatesEarned: 2,
-      totalPoints: 1500
-    },
-    achievements: [
-      {
-        id: 1,
-        title: 'Quick Learner',
-        description: 'Completed 3 courses in one week',
-        icon: '🚀',
-        date: '2 days ago'
-      },
-      {
-        id: 2,
-        title: 'Perfect Score',
-        description: 'Got 100% on a quiz',
-        icon: '⭐',
-        date: '1 week ago'
-      }
-    ],
-    enrolledCourses: [
-      {
-        id: 1,
-        title: 'Introduction to Programming',
-        progress: 75,
-        lastAccessed: '2 hours ago',
-        thumbnail: 'https://picsum.photos/300/200'
-      },
-      {
-        id: 2,
-        title: 'Web Development Fundamentals',
-        progress: 30,
-        lastAccessed: '1 day ago',
-        thumbnail: 'https://picsum.photos/300/200'
-      }
-    ],
-    certificates: [
-      {
-        id: 1,
-        title: 'Python Programming',
-        issueDate: 'January 15, 2024',
-        issuer: 'TekRiders Academy'
-      },
-      {
-        id: 2,
-        title: 'Web Development Basics',
-        issueDate: 'February 1, 2024',
-        issuer: 'TekRiders Academy'
-      }
-    ]
+  const handleChange = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+    setLoading(true); setError(''); setSuccess('');
+    try {
+      const res = await fetch(`/api/users/${user._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify(form)
+      });
+      if (!res.ok) throw new Error('Failed to update profile');
+      setSuccess(t('Profile updated successfully!'));
+      setEditing(false);
+    } catch (err) {
+      setError(t('Error updating profile.'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const TabButton = ({ icon: Icon, label, active, onClick }) => (
@@ -157,12 +123,12 @@ const UserProfile = () => {
       <div className="row mb-4">
         <div className="col-md-3 text-center">
           <img
-            src={user.avatar}
-            alt={user.name}
+            src={form.avatar}
+            alt={form.name}
             className="rounded-circle mb-3"
             style={{ width: 200, height: 200, objectFit: 'cover' }}
           />
-          <button className="btn btn-outline-primary">
+          <button className="btn btn-outline-primary" onClick={() => setEditing(e => !e)}>
             <FiEdit2 className="me-2" />
             {t('Edit Profile')}
           </button>
@@ -170,17 +136,17 @@ const UserProfile = () => {
         <div className="col-md-9">
           <div className="d-flex justify-content-between align-items-start">
             <div>
-              <h2 className="mb-1">{user.name}</h2>
-              <p className="text-muted mb-2">{user.role}</p>
-              <p className="mb-3">{user.bio}</p>
+              <h2 className="mb-1">{form.name}</h2>
+              <p className="text-muted mb-2">{user?.role}</p>
+              <p className="mb-3">{form.bio}</p>
               <div className="d-flex gap-3">
                 <div>
                   <FiClock className="me-2" />
-                  {t('Joined')} {user.joinDate}
+                  {t('Joined')} {user?.joinDate}
                 </div>
                 <div>
                   <FiStar className="me-2" />
-                  {user.stats.totalPoints} {t('points')}
+                  {user?.stats?.totalPoints} {t('points')}
                 </div>
               </div>
             </div>
@@ -197,28 +163,28 @@ const UserProfile = () => {
         <div className="col-md-3">
           <StatCard
             icon={FiBook}
-            value={user.stats.coursesEnrolled}
+            value={user?.stats?.coursesEnrolled}
             label={t('Courses Enrolled')}
           />
         </div>
         <div className="col-md-3">
           <StatCard
             icon={FiAward}
-            value={user.stats.coursesCompleted}
+            value={user?.stats?.coursesCompleted}
             label={t('Courses Completed')}
           />
         </div>
         <div className="col-md-3">
           <StatCard
             icon={FiStar}
-            value={user.stats.certificatesEarned}
+            value={user?.stats?.certificatesEarned}
             label={t('Certificates')}
           />
         </div>
         <div className="col-md-3">
           <StatCard
             icon={FiAward}
-            value={user.stats.totalPoints}
+            value={user?.stats?.totalPoints}
             label={t('Total Points')}
           />
         </div>
@@ -250,7 +216,7 @@ const UserProfile = () => {
       {activeTab === 'overview' && (
         <div>
           <h4 className="mb-4">{t('Enrolled Courses')}</h4>
-          {user.enrolledCourses.map(course => (
+          {user?.enrolledCourses.map(course => (
             <CourseCard key={course.id} course={course} />
           ))}
         </div>
@@ -259,7 +225,7 @@ const UserProfile = () => {
       {activeTab === 'achievements' && (
         <div>
           <h4 className="mb-4">{t('Recent Achievements')}</h4>
-          {user.achievements.map(achievement => (
+          {user?.achievements.map(achievement => (
             <motion.div
               key={achievement.id}
               whileHover={{ y: -5 }}
@@ -287,10 +253,39 @@ const UserProfile = () => {
       {activeTab === 'certificates' && (
         <div>
           <h4 className="mb-4">{t('Certificates')}</h4>
-          {user.certificates.map(certificate => (
+          {user?.certificates.map(certificate => (
             <CertificateCard key={certificate.id} certificate={certificate} />
           ))}
         </div>
+      )}
+
+      {editing && (
+        <form onSubmit={handleSubmit} className="mb-4">
+          <div className="row g-3">
+            <div className="col-md-6">
+              <label className="form-label">{t('Name')}</label>
+              <input className="form-control" name="name" value={form.name} onChange={handleChange} required />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label">{t('Email')}</label>
+              <input className="form-control" name="email" value={form.email} onChange={handleChange} required />
+            </div>
+            <div className="col-12">
+              <label className="form-label">{t('Bio')}</label>
+              <textarea className="form-control" name="bio" value={form.bio} onChange={handleChange} rows={3} />
+            </div>
+            <div className="col-12">
+              <label className="form-label">{t('Avatar URL')}</label>
+              <input className="form-control" name="avatar" value={form.avatar} onChange={handleChange} />
+            </div>
+          </div>
+          <div className="mt-3">
+            <button className="btn btn-primary me-2" type="submit" disabled={loading}>{loading ? t('Saving...') : t('Save')}</button>
+            <button className="btn btn-secondary" type="button" onClick={() => setEditing(false)}>{t('Cancel')}</button>
+          </div>
+          {error && <div className="alert alert-danger mt-3">{error}</div>}
+          {success && <div className="alert alert-success mt-3">{success}</div>}
+        </form>
       )}
     </div>
   );

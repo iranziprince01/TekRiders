@@ -16,8 +16,8 @@ exports.register = async (req, res) => {
   if ((!email && !phone) || !password || !role) {
     return res.status(400).json({ message: 'Email or phone, password, and role are required.' });
   }
-  if (!['student', 'instructor'].includes(role)) {
-    return res.status(400).json({ message: 'Role must be student or instructor.' });
+  if (!['learner', 'tutor'].includes(role)) {
+    return res.status(400).json({ message: 'Role must be learner or tutor.' });
   }
   
   try {
@@ -88,6 +88,7 @@ exports.login = async (req, res) => {
     res.json({ 
       token, 
       user: { 
+        _id: user._id,
         email: user.email, 
         phone: user.phone,
         role: user.role 

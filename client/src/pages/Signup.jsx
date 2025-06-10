@@ -1,33 +1,61 @@
 import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
 import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
+import { useAuth } from '../contexts/AuthContext';
+import googleLogo from '../assets/google.webp';
+import { Modal, Button } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 
 const Signup = () => {
   const { t } = useTranslation();
+  const { signup } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [role, setRole] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const navigate = useNavigate();
 
   const submit = async e => {
     e.preventDefault();
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, phone, password, role })
-    });
-    const data = await res.json();
-    if (res.ok) {
-      alert('Registered successfully');
-      window.location.href = '/login';
-    } else {
-      alert(data.message || 'Signup failed');
+    setError('');
+    if (!role) {
+      setShowRoleModal(true);
+      setLoading(false);
+      return;
     }
+    setLoading(true);
+    const result = await signup(email, password, role);
+    if (!result.success) {
+      setError(result.message);
+    } else {
+      setSuccess(true);
+    }
+    setLoading(false);
   };
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    if (token) {
+      fetch('/api/users/profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(user => {
+          localStorage.setItem('user', JSON.stringify({ ...user, token }));
+          localStorage.setItem('token', token);
+          navigate('/learner');
+        })
+        .catch(() => {});
+    }
+  }, [navigate]);
 
   return (
     <>
@@ -38,61 +66,70 @@ const Signup = () => {
           </div>
           <form autoComplete="off" onSubmit={submit}>
             <div className="mb-3">
-              <input 
-                type="email" 
-                className="form-control form-control-lg" 
-                placeholder={t('Email')} 
-                required 
+              <input
+                type="email"
+                className="form-control form-control-lg"
+                placeholder={t('Email')}
+                required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
               />
             </div>
-            <div className="mb-3">
-              <PhoneInput
-                country={'rw'}
-                value={phone}
-                onChange={phone => setPhone(phone)}
-                inputClass="form-control form-control-lg"
-                containerClass="phone-input-container"
-                buttonClass="phone-input-button"
-                dropdownClass="phone-input-dropdown"
-                searchClass="phone-input-search"
-                inputProps={{
-                  required: true,
-                  placeholder: t('Phone Number')
-                }}
-              />
-            </div>
             <div className="mb-3 position-relative">
-              <input 
-                type={showPassword ? 'text' : 'password'} 
-                className="form-control form-control-lg" 
-                placeholder={t('Password')} 
-                required 
-                value={password} 
-                onChange={e => setPassword(e.target.value)} 
+              <input
+                type={showPassword ? 'text' : 'password'}
+                className="form-control form-control-lg"
+                placeholder={t('Password')}
+                required
+                value={password}
+                onChange={e => setPassword(e.target.value)}
               />
-              <span 
-                onClick={() => setShowPassword(v => !v)} 
-                style={{position:'absolute',right:16,top:14,cursor:'pointer',fontSize:'1.2rem',color:'#399ff7'}} 
+              <span
+                onClick={() => setShowPassword(v => !v)}
+                style={{position:'absolute',right:16,top:14,cursor:'pointer',fontSize:'1.2rem',color:'#399ff7'}}
                 title={showPassword ? 'Hide' : 'Show'}
               >
                 {showPassword ? '🙈' : '👁️'}
               </span>
             </div>
             <div className="mb-3">
-              <select 
-                className="form-select form-select-lg" 
-                required
+              <select
+                id="role"
+                className="form-select form-select-lg"
                 value={role}
                 onChange={e => setRole(e.target.value)}
+                required
+                style={{ fontWeight: 500, color: role ? '#222' : '#888' }}
               >
-                <option value="">{t('Select your role')}</option>
-                <option value="student">{t('Student')}</option>
-                <option value="instructor">{t('Instructor')}</option>
+                <option value="" disabled>Select Role</option>
+                <option value="learner">Learner</option>
+                <option value="tutor">Tutor</option>
               </select>
             </div>
             <button type="submit" className="btn btn-primary w-100 py-2 mt-2" style={{fontWeight: 600}}>{t('Sign Up')}</button>
+            <div className="text-center my-3" style={{fontWeight:500}}>OR</div>
+            <button
+              type="button"
+              className="w-100 d-flex align-items-center justify-content-center py-3 mb-2"
+              style={{
+                background: '#e6f0f6',
+                border: '1.5px solid #b6e0fa',
+                borderRadius: 10,
+                fontSize: '1.15rem',
+                fontWeight: 500,
+                color: '#222',
+                outline: 'none',
+                cursor: 'pointer',
+                transition: 'background 0.2s',
+                marginBottom: 16
+              }}
+              onClick={() => window.location.href = `/api/auth/google?role=${role || ''}`}
+            >
+              <img src={googleLogo} alt="Google" style={{width:28, height:28, marginRight:16}} />
+              Continue With Google
+            </button>
+            {success && <div className="alert alert-success mt-2">{t('Account created! You can now log in.')}</div>}
+            {error && <div className="alert alert-danger mt-2">{error}</div>}
           </form>
           <div className="text-center mt-3">
             <span className="text-muted">{t('Already have an account?')} </span>
@@ -101,6 +138,20 @@ const Signup = () => {
         </div>
       </div>
       <Footer />
+      {/* Role selection modal */}
+      <Modal show={showRoleModal} onHide={() => setShowRoleModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Please Select a Role</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>You must choose whether you are a learner or a tutor to continue.</p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="primary" onClick={() => setShowRoleModal(false)}>
+            OK
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
   );
 };

@@ -17,12 +17,13 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (identifier, identifierType, password) => {
+  const login = async (email, password) => {
     try {
+      const payload = { identifier: email, identifierType: 'email', password };
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier, identifierType, password })
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       
@@ -31,14 +32,17 @@ export const AuthProvider = ({ children }) => {
           ...data.user,
           token: data.token
         };
+        // Ensure _id is present
+        if (!userData._id && data.user.id) userData._id = data.user.id;
         localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('token', data.token);
         setUser(userData);
         
         // Redirect based on role
-        if (userData.role === 'student') {
-          navigate('/student');
-        } else if (userData.role === 'instructor') {
-          navigate('/instructor');
+        if (userData.role === 'learner') {
+          navigate('/learner');
+        } else if (userData.role === 'tutor') {
+          navigate('/tutor');
         } else if (userData.role === 'admin') {
           navigate('/admin');
         }
@@ -53,15 +57,35 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
     setUser(null);
     navigate('/login');
+  };
+
+  const signup = async (email, password, role) => {
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, role })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        return { success: true };
+      } else {
+        return { success: false, message: data.message };
+      }
+    } catch (error) {
+      return { success: false, message: 'Network error' };
+    }
   };
 
   const value = {
     user,
     loading,
     login,
-    logout
+    logout,
+    signup
   };
 
   return (

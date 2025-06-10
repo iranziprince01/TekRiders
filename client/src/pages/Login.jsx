@@ -1,32 +1,77 @@
 import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
 import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PhoneInput from 'react-phone-input-2';
 import { useAuth } from '../contexts/AuthContext';
 import 'react-phone-input-2/lib/style.css';
+import googleLogo from '../assets/google.webp';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const { t } = useTranslation();
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [identifier, setIdentifier] = useState('');
-  const [identifierType, setIdentifierType] = useState('email'); // 'email' or 'phone'
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [pendingUser, setPendingUser] = useState(null);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    if (token) {
+      fetch('/api/users/profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(user => {
+          localStorage.setItem('user', JSON.stringify({ ...user, token }));
+          localStorage.setItem('token', token);
+          navigate('/learner');
+        })
+        .catch(() => setError('Google authentication failed.'));
+    }
+  }, [navigate]);
+
+  const handleRoleSelect = async (role) => {
+    if (!pendingUser) return;
+    try {
+      const res = await fetch('/api/users/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${pendingUser.token}`
+        },
+        body: JSON.stringify({ role })
+      });
+      if (res.ok) {
+        const updatedUser = { ...pendingUser, role };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        localStorage.setItem('token', pendingUser.token);
+        setShowRoleModal(false);
+        if (role === 'learner') navigate('/learner');
+        else if (role === 'tutor') navigate('/tutor');
+        else setError('Role not supported.');
+      } else {
+        setError('Failed to update role.');
+      }
+    } catch {
+      setError('Failed to update role.');
+    }
+  };
 
   const submit = async e => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
-    const result = await login(identifier, identifierType, password);
-    
+    const result = await login(email, password);
     if (!result.success) {
       setError(result.message);
     }
-    
     setLoading(false);
   };
 
@@ -39,47 +84,14 @@ const Login = () => {
           </div>
           <form autoComplete="off" onSubmit={submit}>
             <div className="mb-3">
-              <div className="btn-group w-100 mb-2" role="group">
-                <button 
-                  type="button" 
-                  className={`btn ${identifierType === 'email' ? 'btn-primary' : 'btn-outline-primary'}`}
-                  onClick={() => setIdentifierType('email')}
-                >
-                  {t('Email')}
-                </button>
-                <button 
-                  type="button" 
-                  className={`btn ${identifierType === 'phone' ? 'btn-primary' : 'btn-outline-primary'}`}
-                  onClick={() => setIdentifierType('phone')}
-                >
-                  {t('Phone')}
-                </button>
-              </div>
-              {identifierType === 'email' ? (
-                <input 
-                  type="email" 
-                  className="form-control form-control-lg" 
-                  placeholder={t('Email')} 
-                  required 
-                  value={identifier}
-                  onChange={e => setIdentifier(e.target.value)}
-                />
-              ) : (
-                <PhoneInput
-                  country={'rw'}
-                  value={identifier}
-                  onChange={phone => setIdentifier(phone)}
-                  inputClass="form-control form-control-lg"
-                  containerClass="phone-input-container"
-                  buttonClass="phone-input-button"
-                  dropdownClass="phone-input-dropdown"
-                  searchClass="phone-input-search"
-                  inputProps={{
-                    required: true,
-                    placeholder: t('Phone Number')
-                  }}
-                />
-              )}
+              <input 
+                type="email" 
+                className="form-control form-control-lg" 
+                placeholder={t('Email')} 
+                required 
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+              />
             </div>
             <div className="mb-3 position-relative">
               <input 
@@ -111,6 +123,27 @@ const Login = () => {
               {loading ? t('Logging in...') : t('Log In')}
             </button>
           </form>
+          <div className="text-center my-3" style={{fontWeight:500}}>OR</div>
+          <button
+            type="button"
+            className="w-100 d-flex align-items-center justify-content-center py-3 mb-2"
+            style={{
+              background: '#e6f0f6',
+              border: '1.5px solid #b6e0fa',
+              borderRadius: 10,
+              fontSize: '1.15rem',
+              fontWeight: 500,
+              color: '#222',
+              outline: 'none',
+              cursor: 'pointer',
+              transition: 'background 0.2s',
+              marginBottom: 16
+            }}
+            onClick={() => window.location.href = '/api/auth/google'}
+          >
+            <img src={googleLogo} alt="Google" style={{width:28, height:28, marginRight:16}} />
+            Continue With Google
+          </button>
           <div className="text-center mt-3">
             <span className="text-muted">{t("Don't have an account?")} </span>
             <Link to="/signup" className="footer-link" style={{color: 'var(--main-color)', fontWeight: 500}}>{t('Sign Up')}</Link>
@@ -118,6 +151,19 @@ const Login = () => {
         </div>
       </div>
       <Footer />
+      {/* Role selection modal for Google login */}
+      {showRoleModal && (
+        <div style={{position:'fixed',top:0,left:0,width:'100vw',height:'100vh',background:'rgba(0,0,0,0.25)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{background:'#fff',borderRadius:12,padding:32,minWidth:320,boxShadow:'0 4px 32px rgba(56,189,248,0.10)'}}>
+            <h4 style={{fontWeight:700,marginBottom:16}}>Choose Your Role</h4>
+            <p style={{marginBottom:24}}>Please select whether you are a learner or a tutor to continue.</p>
+            <div className="d-flex gap-3 justify-content-center">
+              <button className="btn btn-primary" style={{minWidth:120}} onClick={()=>handleRoleSelect('learner')}>Learner</button>
+              <button className="btn btn-outline-primary" style={{minWidth:120}} onClick={()=>handleRoleSelect('tutor')}>Tutor</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

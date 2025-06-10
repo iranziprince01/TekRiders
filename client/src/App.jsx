@@ -1,32 +1,37 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import Header from './components/Header'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
-import StudentDashboard from './pages/StudentDashboard'
-import InstructorDashboard from './pages/InstructorDashboard'
+import LearnerDashboard from './pages/StudentDashboard'
+import TutorDashboard from './pages/InstructorDashboard'
 import AdminDashboard from './pages/AdminDashboard'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import './styles/main.scss'
+import { useEffect } from 'react'
+import RoleSelect from './pages/RoleSelect'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 // Protected Route component
-const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { user, loading } = useAuth();
-  
-  if (loading) {
-    return <div>Loading...</div>;
+const ProtectedRoute = ({ children, requiredRole }) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+    } else if (requiredRole && user.role !== requiredRole) {
+      navigate('/');
+    }
+  }, [user, requiredRole, navigate]);
+
+  if (!user || (requiredRole && user.role !== requiredRole)) {
+    return null;
   }
-  
-  if (!user) {
-    return <Navigate to="/login" />;
-  }
-  
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/" />;
-  }
-  
+
   return children;
 };
 
@@ -38,26 +43,27 @@ function AppRoutes() {
       <Route path="/signup" element={<Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/role-select" element={<RoleSelect />} />
       <Route 
-        path="/student" 
+        path="/learner" 
         element={
-          <ProtectedRoute allowedRoles={['student']}>
-            <StudentDashboard />
+          <ProtectedRoute requiredRole="learner">
+            <LearnerDashboard />
           </ProtectedRoute>
         } 
       />
       <Route 
-        path="/instructor" 
+        path="/tutor" 
         element={
-          <ProtectedRoute allowedRoles={['instructor']}>
-            <InstructorDashboard />
+          <ProtectedRoute requiredRole="tutor">
+            <TutorDashboard />
           </ProtectedRoute>
         } 
       />
       <Route 
         path="/admin" 
         element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute requiredRole="admin">
             <AdminDashboard />
           </ProtectedRoute>
         } 
@@ -66,12 +72,33 @@ function AppRoutes() {
   );
 }
 
+function AppWithConditionalHeader() {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  return (
+    <>
+      {!isAdminRoute && <Header />}
+      <AppRoutes />
+    </>
+  );
+}
+
 function App() {
   return (
     <Router>
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
       <AuthProvider>
-        <Header />
-        <AppRoutes />
+        <AppWithConditionalHeader />
       </AuthProvider>
     </Router>
   )
