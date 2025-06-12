@@ -99,7 +99,7 @@ Each notification document typically contains:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/tekriders.git
+git clone https://github.com/iranziprince01/tekriders.git
 cd tekriders
 ```
 
