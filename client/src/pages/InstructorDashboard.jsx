@@ -5,14 +5,18 @@ import { useAuth } from '../contexts/AuthContext';
 import CourseCreationForm from '../components/CourseCreationForm';
 import CourseAnalytics from '../components/CourseAnalytics';
 import UserProfile from '../components/UserProfile';
+import { useRef } from 'react';
+import Modal from 'react-bootstrap/Modal';
+import axios from 'axios';
+import { Link } from 'react-router-dom';
+
+const API_URL = 'http://localhost:3000/api'; // Adjusted to match backend server
 
 const TABS = [
   { key: 'courses', label: 'My Courses', icon: FiBook },
   { key: 'upload', label: 'Upload', icon: FiPlus },
   { key: 'analytics', label: 'Analytics', icon: FiBarChart2 },
-  { key: 'notifications', label: 'Notifications', icon: FiBell },
   { key: 'profile', label: 'Profile', icon: FiUser },
-  { key: 'settings', label: 'Settings', icon: FiSettings },
 ];
 
 export default function TutorDashboard() {
@@ -52,6 +56,9 @@ export default function TutorDashboard() {
       ]
     }
   ]);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editCourse, setEditCourse] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
 
   // Fetch tutor's courses
   const fetchCourses = async () => {
@@ -73,7 +80,7 @@ export default function TutorDashboard() {
       setCourses([]);
     } finally {
       setLoading(false);
-    }
+        }
   };
 
   useEffect(() => {
@@ -108,8 +115,18 @@ export default function TutorDashboard() {
 
   // Delete course (local only, for now)
   const handleDelete = async (courseId) => {
-    if (!window.confirm(t('Are you sure you want to delete this course?'))) return;
-    setCourses(courses.filter(c => c._id !== courseId));
+    if (!window.confirm('Are you sure you want to delete this course? This action cannot be undone.')) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/courses/${courseId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setCourses(courses.filter(course => course._id !== courseId));
+    } catch (error) {
+      console.error('Error deleting course:', error);
+    }
   };
 
   // Status badge color
@@ -162,29 +179,64 @@ export default function TutorDashboard() {
         ) : filteredCourses.length === 0 ? (
           <div className="alert alert-info">{t('No courses found. Click "Upload New Course" to add your first course.')}</div>
         ) : (
-          <div className="row g-4">
-            {filteredCourses.map(course => (
-              <div key={course._id} className="col-md-6 col-lg-4">
-                <div className="card h-100">
-                  <div className="card-body">
-                    <h5 className="card-title">{course.title}</h5>
-                    <p className="card-text">{course.description}</p>
-                    <div className="d-flex justify-content-between align-items-center mt-3">
-                      <span className={`badge bg-${statusColor(course.status)}`}>{course.status}</span>
-                      <div>
-                        <button className="btn btn-sm btn-outline-primary me-2" title={t('Edit')}>
-                          <FiEdit2 />
-                        </button>
-                        <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(course._id)} title={t('Delete')}>
-                          <FiTrash2 />
-                        </button>
-                      </div>
+        <div className="row g-4">
+          {filteredCourses.map(course => (
+            <div key={course._id} className="col-md-6 col-lg-4">
+              <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 2px 12px rgba(56, 189, 248, 0.10)', padding: '1.2rem 1.1rem 1.1rem 1.1rem', minHeight: 220, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: 'none' }}>
+                <Link to={`/course/${course._id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <h3 style={{ fontWeight: 700, fontSize: '1.18rem', margin: 0 }}>{course.title}</h3>
+                      <span
+                        style={{
+                          background:
+                            course.status === 'draft'
+                              ? '#fff6e0'
+                              : course.status === 'approved'
+                              ? '#e6f6ec'
+                              : course.status === 'rejected'
+                              ? '#ffeaea'
+                              : '#e6f6ec',
+                          color:
+                            course.status === 'draft'
+                              ? '#f7a32b'
+                              : course.status === 'approved'
+                              ? '#2eaf6c'
+                              : course.status === 'rejected'
+                              ? '#f44336'
+                              : '#2eaf6c',
+                          fontWeight: 600,
+                          borderRadius: 16,
+                          padding: '0.18rem 0.9rem',
+                          fontSize: '0.95rem',
+                        }}
+                      >
+                        {course.status === 'draft'
+                          ? t('Pending')
+                          : course.status === 'approved'
+                          ? t('Approved')
+                          : course.status === 'rejected'
+                          ? t('Rejected')
+                          : t(course.status.charAt(0).toUpperCase() + course.status.slice(1))}
+                      </span>
+                    </div>
+                    <p style={{ color: '#888', fontSize: '0.98rem', marginBottom: 16 }}>{course.description}</p>
+                    <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+                      <span style={{ background: '#e0e7ff', color: '#3b4cca', fontWeight: 600, borderRadius: 8, padding: '0.32rem 0.8rem', fontSize: '0.98rem' }}>{course.category || t('No Category')}</span>
+                      <span style={{ background: '#e6f6fc', color: '#2b9ef7', fontWeight: 600, borderRadius: 8, padding: '0.32rem 0.8rem', fontSize: '0.98rem' }}>Enrolled: <span style={{ color: '#2997f7' }}>{course.enrolled ?? 0}</span></span>
+                      <span style={{ background: '#fff6e0', color: '#f7a32b', fontWeight: 600, borderRadius: 8, padding: '0.32rem 0.8rem', fontSize: '0.98rem' }}>Rating: <span style={{ color: '#f7a32b' }}>{course.rating ?? 'N/A'}</span></span>
                     </div>
                   </div>
+                </Link>
+                <div style={{ display: 'flex', gap: 10, marginTop: 8, justifyContent: 'flex-start' }}>
+                  <button className="btn d-flex align-items-center justify-content-center" style={{ border: '2px solid #2997f7', color: '#2997f7', fontWeight: 600, fontSize: '1rem', borderRadius: 7, padding: '0.35rem 1.2rem', background: 'none', minWidth: 90, height: 40 }} onClick={() => handleEdit(course)}>{t('Update')}</button>
+                  <button className="btn d-flex align-items-center justify-content-center" style={{ border: '2px solid #bbb', color: '#444', fontWeight: 600, fontSize: '1rem', borderRadius: 7, padding: '0.35rem 1.2rem', background: 'none', minWidth: 90, height: 40 }}>{t('Analytics')}</button>
+                  <button className="btn d-flex align-items-center justify-content-center" style={{ border: '2px solid #f44336', color: '#f44336', fontWeight: 600, fontSize: '1rem', borderRadius: 7, padding: '0.35rem 1.2rem', background: 'none', minWidth: 90, height: 40 }} onClick={() => handleDelete(course._id)}>{t('Delete')}</button>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
+        </div>
         )}
       </div>
     );
@@ -219,7 +271,7 @@ export default function TutorDashboard() {
       <div className="container py-4">
         <h2 className="mb-4">{t('Notifications')}</h2>
         {notifications.length === 0 ? (
-          <div className="alert alert-info">{t('No notifications yet.')}</div>
+        <div className="alert alert-info">{t('No notifications yet.')}</div>
         ) : (
           <ul className="list-group">
             {notifications.map(n => (
@@ -290,16 +342,64 @@ export default function TutorDashboard() {
     );
   }
 
+  const handleEdit = (course) => {
+    setEditCourse(course);
+    setEditFormData({
+      ...course,
+      lessons: course.lessons || [],
+      thumbnail: null // reset thumbnail for editing
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (data) => {
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('title', data.title);
+      formDataToSend.append('description', data.description);
+      formDataToSend.append('category', data.category);
+      formDataToSend.append('language', data.language);
+      formDataToSend.append('contentType', data.contentType);
+      formDataToSend.append('content', JSON.stringify(data.lessons));
+      if (data.thumbnail) {
+        formDataToSend.append('image', data.thumbnail);
+      }
+      const response = await fetch(`/api/courses/${editCourse._id}`, {
+        method: 'PUT',
+        body: formDataToSend,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (!response.ok) throw new Error('Failed to update course');
+      setShowEditModal(false);
+      fetchCourses();
+    } catch (err) {
+      alert('Failed to update course');
+    }
+  };
+
+  const handleUpdate = (course) => {
+    setSelectedCourse(course);
+    setShowUpdateModal(true);
+  };
+
+  const handleAnalytics = (courseId) => {
+    // Implement analytics functionality
+    console.log('Analytics for course:', courseId);
+  };
+
   return (
     <div className="dashboard-container d-flex" style={{ minHeight: '100vh' }}>
       {/* Sidebar */}
-      <div className="sidebar bg-white border-end" style={{ width: 260, position: 'fixed', height: '100vh' }}>
+      <div className="sidebar bg-white border-end d-flex flex-column" style={{ width: 260, position: 'fixed', height: '100vh', justifyContent: 'space-between' }}>
         <div className="p-4">
-          <h3 className="mb-4">{t('TekRiders')}</h3>
           {TABS.map(tab => (
             <SidebarItem key={tab.key} icon={tab.icon} label={tab.label} tab={tab.key} />
           ))}
-          <div className="sidebar-item d-flex align-items-center p-3 mt-4 rounded-3 cursor-pointer text-danger" onClick={logout} style={{ cursor: 'pointer' }}>
+        </div>
+        <div className="p-4" style={{ position: 'absolute', bottom: '7rem', width: '100%' }}>
+          <div className="sidebar-item d-flex align-items-center p-3 rounded-3 cursor-pointer text-danger" onClick={logout} style={{ cursor: 'pointer', color: '#e53935', fontWeight: 600, fontSize: '1.08rem', background: 'none' }}>
             <FiLogOut className="me-3" size={20} />
             <span>{t('Logout')}</span>
           </div>
@@ -307,6 +407,20 @@ export default function TutorDashboard() {
       </div>
       {/* Main Content */}
       <div style={{ marginLeft: 260, width: '100%' }}>{mainContent}</div>
+      {/* Edit Course Modal */}
+      <Modal show={showEditModal} onHide={() => setShowEditModal(false)} size="lg" centered>
+        <Modal.Header closeButton>
+          <Modal.Title>{t('Edit Course')}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <CourseCreationForm
+            formData={editFormData}
+            setFormData={setEditFormData}
+            isEdit
+            onSubmit={handleEditSubmit}
+          />
+        </Modal.Body>
+      </Modal>
     </div>
   );
 } 

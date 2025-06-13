@@ -2,19 +2,38 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
-import { FiEdit2, FiAward, FiBook, FiClock, FiStar, FiSettings } from 'react-icons/fi';
+import { FiEdit2, FiAward, FiBook, FiClock, FiStar, FiSettings, FiUser } from 'react-icons/fi';
 
 const UserProfile = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: user?.name || '', email: user?.email || '', bio: user?.bio || '', avatar: user?.avatar || '' });
+  const [form, setForm] = useState({
+    firstName: user?.firstName || '',
+    middleName: user?.middleName || '',
+    lastName: user?.lastName || '',
+    phone: user?.phone || '',
+    profession: user?.profession || '',
+    address: user?.address || '',
+    email: user?.email || '',
+    avatar: user?.avatar || ''
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   const handleChange = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+  const handleAvatarChange = e => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm(f => ({ ...f, avatar: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -28,6 +47,15 @@ const UserProfile = () => {
       if (!res.ok) throw new Error('Failed to update profile');
       setSuccess(t('Profile updated successfully!'));
       setEditing(false);
+      // Fetch updated profile and update AuthContext
+      const updatedRes = await fetch(`/api/users/profile`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (updatedRes.ok) {
+        const updatedUser = await updatedRes.json();
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
     } catch (err) {
       setError(t('Error updating profile.'));
     } finally {
@@ -117,14 +145,16 @@ const UserProfile = () => {
     </motion.div>
   );
 
+  if (!user) return <div>Loading...</div>;
+
   return (
     <div className="container py-4">
       {/* Profile Header */}
       <div className="row mb-4">
         <div className="col-md-3 text-center">
           <img
-            src={form.avatar}
-            alt={form.name}
+            src={form.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(form.firstName + ' ' + form.lastName) + '&size=200'}
+            alt={form.firstName + ' ' + form.lastName}
             className="rounded-circle mb-3"
             style={{ width: 200, height: 200, objectFit: 'cover' }}
           />
@@ -134,149 +164,71 @@ const UserProfile = () => {
           </button>
         </div>
         <div className="col-md-9">
-          <div className="d-flex justify-content-between align-items-start">
-            <div>
-              <h2 className="mb-1">{form.name}</h2>
-              <p className="text-muted mb-2">{user?.role}</p>
-              <p className="mb-3">{form.bio}</p>
-              <div className="d-flex gap-3">
-                <div>
-                  <FiClock className="me-2" />
-                  {t('Joined')} {user?.joinDate}
-                </div>
-                <div>
-                  <FiStar className="me-2" />
-                  {user?.stats?.totalPoints} {t('points')}
-                </div>
-              </div>
-            </div>
-            <button className="btn btn-outline-primary">
-              <FiSettings className="me-2" />
-              {t('Settings')}
-            </button>
+          <div className="d-flex flex-column align-items-start">
+            <h2 className="mb-1">{form.firstName} {form.middleName} {form.lastName}</h2>
+            <p className="text-muted mb-2">{user?.role}</p>
+            <p className="mb-3">{form.profession}</p>
+            <p className="mb-3">{form.address}</p>
+            <p className="mb-3">{form.phone}</p>
+            <p className="mb-3">{form.email}</p>
           </div>
         </div>
       </div>
 
-      {/* Stats Overview */}
+      {/* Tutor Stats Overview */}
       <div className="row g-4 mb-4">
-        <div className="col-md-3">
+        <div className="col-md-6">
           <StatCard
             icon={FiBook}
-            value={user?.stats?.coursesEnrolled}
-            label={t('Courses Enrolled')}
+            value={user?.stats?.coursesPublished || 0}
+            label={t('Courses Published')}
           />
         </div>
-        <div className="col-md-3">
+        <div className="col-md-6">
           <StatCard
-            icon={FiAward}
-            value={user?.stats?.coursesCompleted}
-            label={t('Courses Completed')}
-          />
-        </div>
-        <div className="col-md-3">
-          <StatCard
-            icon={FiStar}
-            value={user?.stats?.certificatesEarned}
-            label={t('Certificates')}
-          />
-        </div>
-        <div className="col-md-3">
-          <StatCard
-            icon={FiAward}
-            value={user?.stats?.totalPoints}
-            label={t('Total Points')}
+            icon={FiUser}
+            value={user?.stats?.totalLearners || 0}
+            label={t('Total Learners Enrolled')}
           />
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="mb-4">
-        <TabButton
-          icon={FiBook}
-          label={t('Overview')}
-          active={activeTab === 'overview'}
-          onClick={() => setActiveTab('overview')}
-        />
-        <TabButton
-          icon={FiAward}
-          label={t('Achievements')}
-          active={activeTab === 'achievements'}
-          onClick={() => setActiveTab('achievements')}
-        />
-        <TabButton
-          icon={FiStar}
-          label={t('Certificates')}
-          active={activeTab === 'certificates'}
-          onClick={() => setActiveTab('certificates')}
-        />
-      </div>
-
-      {/* Content */}
-      {activeTab === 'overview' && (
-        <div>
-          <h4 className="mb-4">{t('Enrolled Courses')}</h4>
-          {user?.enrolledCourses.map(course => (
-            <CourseCard key={course.id} course={course} />
-          ))}
-        </div>
-      )}
-
-      {activeTab === 'achievements' && (
-        <div>
-          <h4 className="mb-4">{t('Recent Achievements')}</h4>
-          {user?.achievements.map(achievement => (
-            <motion.div
-              key={achievement.id}
-              whileHover={{ y: -5 }}
-              className="card border-0 shadow-sm mb-3"
-            >
-              <div className="card-body">
-                <div className="d-flex align-items-center">
-                  <div className="display-4 me-3">{achievement.icon}</div>
-                  <div>
-                    <h5 className="mb-1">{achievement.title}</h5>
-                    <p className="text-muted small mb-0">
-                      {achievement.description}
-                    </p>
-                    <small className="text-muted">
-                      {achievement.date}
-                    </small>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      )}
-
-      {activeTab === 'certificates' && (
-        <div>
-          <h4 className="mb-4">{t('Certificates')}</h4>
-          {user?.certificates.map(certificate => (
-            <CertificateCard key={certificate.id} certificate={certificate} />
-          ))}
-        </div>
-      )}
+      {/* No tabs for tutor profile */}
 
       {editing && (
         <form onSubmit={handleSubmit} className="mb-4">
           <div className="row g-3">
+            <div className="col-md-4">
+              <label className="form-label">{t('First Name')}</label>
+              <input className="form-control" name="firstName" value={form.firstName} onChange={handleChange} required />
+            </div>
+            <div className="col-md-4">
+              <label className="form-label">{t('Middle Name')}</label>
+              <input className="form-control" name="middleName" value={form.middleName} onChange={handleChange} />
+            </div>
+            <div className="col-md-4">
+              <label className="form-label">{t('Last Name')}</label>
+              <input className="form-control" name="lastName" value={form.lastName} onChange={handleChange} required />
+            </div>
             <div className="col-md-6">
-              <label className="form-label">{t('Name')}</label>
-              <input className="form-control" name="name" value={form.name} onChange={handleChange} required />
+              <label className="form-label">{t('Phone Number')}</label>
+              <input className="form-control" name="phone" value={form.phone} onChange={handleChange} />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label">{t('Profession')}</label>
+              <input className="form-control" name="profession" value={form.profession} onChange={handleChange} />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label">{t('Address')}</label>
+              <input className="form-control" name="address" value={form.address} onChange={handleChange} />
             </div>
             <div className="col-md-6">
               <label className="form-label">{t('Email')}</label>
               <input className="form-control" name="email" value={form.email} onChange={handleChange} required />
             </div>
             <div className="col-12">
-              <label className="form-label">{t('Bio')}</label>
-              <textarea className="form-control" name="bio" value={form.bio} onChange={handleChange} rows={3} />
-            </div>
-            <div className="col-12">
-              <label className="form-label">{t('Avatar URL')}</label>
-              <input className="form-control" name="avatar" value={form.avatar} onChange={handleChange} />
+              <label className="form-label">{t('Profile Picture')}</label>
+              <input className="form-control" type="file" accept="image/*" onChange={handleAvatarChange} />
             </div>
           </div>
           <div className="mt-3">

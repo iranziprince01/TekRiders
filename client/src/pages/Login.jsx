@@ -123,27 +123,6 @@ const Login = () => {
               {loading ? t('Logging in...') : t('Log In')}
             </button>
           </form>
-          <div className="text-center my-3" style={{fontWeight:500}}>OR</div>
-          <button
-            type="button"
-            className="w-100 d-flex align-items-center justify-content-center py-3 mb-2"
-            style={{
-              background: '#e6f0f6',
-              border: '1.5px solid #b6e0fa',
-              borderRadius: 10,
-              fontSize: '1.15rem',
-              fontWeight: 500,
-              color: '#222',
-              outline: 'none',
-              cursor: 'pointer',
-              transition: 'background 0.2s',
-              marginBottom: 16
-            }}
-            onClick={() => window.location.href = '/api/auth/google'}
-          >
-            <img src={googleLogo} alt="Google" style={{width:28, height:28, marginRight:16}} />
-            Continue With Google
-          </button>
           <div className="text-center mt-3">
             <span className="text-muted">{t("Don't have an account?")} </span>
             <Link to="/signup" className="footer-link" style={{color: 'var(--main-color)', fontWeight: 500}}>{t('Sign Up')}</Link>

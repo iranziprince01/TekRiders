@@ -1,5 +1,5 @@
 @use 'bootstrap/scss/bootstrap' as *;
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap');
 
 :root {
   --main-color: #399ff7;
@@ -19,7 +19,7 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.5;
   color: var(--dark-color);
   background-color: var(--light-color);
@@ -351,7 +351,7 @@ body {
   z-index: 100;
 }
 .navbar-brand span {
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 700;
   font-size: 1.7rem;
   letter-spacing: -1px;
@@ -431,7 +431,7 @@ body {
   width: 100%;
 }
 .auth-card .navbar-brand {
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 700;
   font-size: 2rem;
   color: var(--main-color);

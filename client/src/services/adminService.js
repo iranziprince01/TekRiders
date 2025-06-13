@@ -32,4 +32,14 @@ export const adminService = {
     const response = await api.get('/admin/dbs');
     return response.data;
   },
+
+  getAnalytics: async () => {
+    const response = await api.get('/admin/analytics');
+    return response.data;
+  },
+
+  moderateCourse: async (courseId, action) => {
+    const response = await api.put(`/admin/courses/${courseId}/moderate`, { status: action === 'approve' ? 'approved' : 'rejected' });
+    return response.data;
+  },
 }; 

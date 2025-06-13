@@ -28,14 +28,20 @@ export const AuthProvider = ({ children }) => {
       const data = await res.json();
       
       if (res.ok) {
+        const token = data.token;
+        // Fetch the full user profile
+        const profileRes = await fetch('/api/users/profile', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const profile = await profileRes.json();
+
         const userData = {
-          ...data.user,
-          token: data.token
+          ...profile,
+          token,
         };
-        // Ensure _id is present
-        if (!userData._id && data.user.id) userData._id = data.user.id;
+        if (!userData._id && profile.id) userData._id = profile.id;
         localStorage.setItem('user', JSON.stringify(userData));
-        localStorage.setItem('token', data.token);
+        localStorage.setItem('token', token);
         setUser(userData);
         
         // Redirect based on role
@@ -80,12 +86,42 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateProfile = async (userId, updates) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updates)
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        // Update the user state and localStorage with new data
+        const updatedUser = { ...user, ...data };
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        return { success: true, data: updatedUser };
+      } else {
+        return { success: false, message: data.message };
+      }
+    } catch (error) {
+      return { success: false, message: 'Network error' };
+    }
+  };
+
   const value = {
     user,
     loading,
     login,
     logout,
-    signup
+    signup,
+    setUser,
+    updateProfile
   };
 
   return (

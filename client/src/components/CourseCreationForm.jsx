@@ -3,7 +3,7 @@ import { FiPlus, FiTrash2, FiUpload, FiVideo, FiFile, FiImage } from 'react-icon
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-toastify';
 
-export default function CourseCreationForm({ onSuccess, formData, setFormData }) {
+export default function CourseCreationForm({ onSuccess, formData, setFormData, isEdit, onSubmit }) {
   const { t } = useTranslation();
   const { user } = useAuth();
 
@@ -26,19 +26,22 @@ export default function CourseCreationForm({ onSuccess, formData, setFormData })
     }));
   };
   const removeLesson = idx => {
-    setFormData(prev => ({
-      ...prev,
+      setFormData(prev => ({
+        ...prev,
       lessons: prev.lessons.filter((_, i) => i !== idx)
     }));
   };
 
   const handleSubmit = async e => {
     e.preventDefault();
+    if (isEdit && onSubmit) {
+      await onSubmit(formData);
+      return;
+    }
     if (!user) {
       toast.error(t('Please log in to create a course'));
       return;
     }
-
     try {
       const formDataToSend = new FormData();
       
@@ -59,7 +62,11 @@ export default function CourseCreationForm({ onSuccess, formData, setFormData })
 
       // Add video files
       if (formData.contentType === 'Video') {
-        formDataToSend.append('video', formData.lessons.join('\n'));
+        (formData.lessons || []).forEach((lesson, idx) => {
+          if (lesson.file) {
+            formDataToSend.append('video', lesson.file);
+          }
+        });
       }
 
       const response = await fetch('/api/courses', {
@@ -133,7 +140,7 @@ export default function CourseCreationForm({ onSuccess, formData, setFormData })
           <option value="Audio">{t('Audio')}</option>
           <option value="Doc">{t('Doc')}</option>
         </select>
-      </div>
+            </div>
       {formData.contentType && (
         <div className="mb-3">
           <label className="form-label">{t('Lessons')}</label>
@@ -159,11 +166,11 @@ export default function CourseCreationForm({ onSuccess, formData, setFormData })
                   className="form-control"
                   accept={formData.contentType === 'Video' ? 'video/*' : formData.contentType === 'Audio' ? 'audio/*' : 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document'}
                   onChange={e => handleLessonChange(idx, 'file', e.target.files[0])}
-                />
-              )}
+              />
+            )}
               <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => removeLesson(idx)}>&times;</button>
-            </div>
-          ))}
+          </div>
+        ))}
           <button type="button" className="btn btn-outline-primary btn-sm" onClick={addLesson}>{t('Add Lesson')}</button>
         </div>
       )}
@@ -188,7 +195,7 @@ export default function CourseCreationForm({ onSuccess, formData, setFormData })
           onChange={e => setFormData(prev => ({ ...prev, thumbnail: e.target.files[0] }))}
         />
       </div>
-      <button className="btn btn-primary" type="submit">{t('Submit')}</button>
+      <button className="btn btn-primary" type="submit">{isEdit ? t('Save') : t('Submit')}</button>
     </form>
   );
 } 

@@ -107,27 +107,6 @@ const Signup = () => {
               </select>
             </div>
             <button type="submit" className="btn btn-primary w-100 py-2 mt-2" style={{fontWeight: 600}}>{t('Sign Up')}</button>
-            <div className="text-center my-3" style={{fontWeight:500}}>OR</div>
-            <button
-              type="button"
-              className="w-100 d-flex align-items-center justify-content-center py-3 mb-2"
-              style={{
-                background: '#e6f0f6',
-                border: '1.5px solid #b6e0fa',
-                borderRadius: 10,
-                fontSize: '1.15rem',
-                fontWeight: 500,
-                color: '#222',
-                outline: 'none',
-                cursor: 'pointer',
-                transition: 'background 0.2s',
-                marginBottom: 16
-              }}
-              onClick={() => window.location.href = `/api/auth/google?role=${role || ''}`}
-            >
-              <img src={googleLogo} alt="Google" style={{width:28, height:28, marginRight:16}} />
-              Continue With Google
-            </button>
             {success && <div className="alert alert-success mt-2">{t('Account created! You can now log in.')}</div>}
             {error && <div className="alert alert-danger mt-2">{error}</div>}
           </form>

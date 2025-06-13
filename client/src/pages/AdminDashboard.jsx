@@ -46,6 +46,7 @@ const AdminDashboard = () => {
   const [dbs, setDbs] = useState([]);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [analytics, setAnalytics] = useState({ totalUsers: 0, totalCourses: 0, coursesByStatus: {}, usersByRole: {} });
 
   // Fetch data
   useEffect(() => {
@@ -204,20 +205,10 @@ const AdminDashboard = () => {
   const handleCourseAction = async (courseId, action) => {
     try {
       setLoading(true);
-      if (action === 'approve') {
-        await adminService.updateCourseStatus(courseId, 'approved');
+      if (action === 'approve' || action === 'reject') {
+        await adminService.moderateCourse(courseId, action);
         setCourses(courses.map(course => 
-          course.id === courseId ? { ...course, status: 'approved' } : course
-        ));
-      } else if (action === 'reject') {
-        await adminService.updateCourseStatus(courseId, 'rejected');
-        setCourses(courses.map(course => 
-          course.id === courseId ? { ...course, status: 'rejected' } : course
-        ));
-      } else if (action === 'flag') {
-        await adminService.flagCourse(courseId);
-        setCourses(courses.map(course => 
-          course.id === courseId ? { ...course, status: 'flagged', flags: (course.flags || 0) + 1 } : course
+          course.id === courseId ? { ...course, status: action === 'approve' ? 'approved' : 'rejected' } : course
         ));
       }
       setNotification({
@@ -234,6 +225,45 @@ const AdminDashboard = () => {
       setShowModal(false);
     }
   };
+
+  const handleUserRoleUpdate = async (userId, newRole) => {
+    try {
+      setLoading(true);
+      await adminService.updateUserRole(userId, newRole);
+      setUsers(users.map(user => 
+        user.id === userId ? { ...user, role: newRole } : user
+      ));
+      setNotification({
+        type: 'success',
+        message: `User role updated to ${newRole} successfully!`
+      });
+    } catch (err) {
+      setNotification({
+        type: 'danger',
+        message: `Failed to update user role. Please try again.`
+      });
+    } finally {
+      setLoading(false);
+      setShowModal(false);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+      const analyticsData = await adminService.getAnalytics();
+      setAnalytics(analyticsData);
+    } catch (err) {
+      setError('Failed to load analytics data. Please try again.');
+      console.error('Error fetching analytics:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, []);
 
   // Filter users
   const filteredUsers = users.filter(user => {
@@ -384,8 +414,8 @@ const AdminDashboard = () => {
               onChange={(e) => setFilterRole(e.target.value)}
             >
               <option value="all">{t('All Roles')}</option>
-              <option value="student">{t('Students')}</option>
-              <option value="instructor">{t('Instructors')}</option>
+              <option value="learner">{t('Learners')}</option>
+              <option value="tutor">{t('Tutors')}</option>
             </select>
             <select
               className="form-select"

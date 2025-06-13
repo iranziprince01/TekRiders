@@ -1,24 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiEdit2, FiSave, FiX } from 'react-icons/fi';
 import { motion } from 'framer-motion';
+import { useAuth } from '../contexts/AuthContext';
 
 const Profile = () => {
   const { t } = useTranslation();
+  const { user, updateProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState({
-    name: 'John Doe',
-    email: 'john@example.com',
-    phone: '+250 123 456 789',
-    bio: 'Passionate about learning programming and technology.',
-    location: 'Kigali, Rwanda',
-    interests: ['Web Development', 'Mobile Apps', 'Data Science'],
-    education: 'High School Graduate',
-    skills: ['HTML', 'CSS', 'JavaScript', 'Python'],
-    languages: ['English', 'Kinyarwanda', 'French']
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    profession: '',
+    address: '',
+    avatar: ''
   });
 
   const [formData, setFormData] = useState(profile);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      const userProfile = {
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        profession: user.profession || '',
+        address: user.address || '',
+        avatar: user.avatar || ''
+      };
+      setProfile(userProfile);
+      setFormData(userProfile);
+    }
+  }, [user]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -28,44 +46,38 @@ const Profile = () => {
     }));
   };
 
-  const handleArrayInputChange = (e, field) => {
-    const values = e.target.value.split(',').map(item => item.trim());
-    setFormData(prev => ({
-      ...prev,
-      [field]: values
-    }));
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Implement API call to update profile
-    setProfile(formData);
-    setIsEditing(false);
+    setError('');
+    setSuccess('');
+    
+    try {
+      const result = await updateProfile(user._id, formData);
+      if (result.success) {
+        setProfile(result.data);
+        setSuccess(t('Profile updated successfully'));
+        setIsEditing(false);
+      } else {
+        setError(result.message || t('Failed to update profile'));
+      }
+    } catch (err) {
+      setError(t('An error occurred while updating profile'));
+    }
   };
 
-  const ProfileField = ({ label, value, name, type = 'text', isArray = false }) => (
+  const ProfileField = ({ label, value, name, type = 'text' }) => (
     <div className="mb-3">
       <label className="form-label text-muted">{label}</label>
       {isEditing ? (
-        isArray ? (
-          <input
-            type="text"
-            className="form-control"
-            value={formData[name].join(', ')}
-            onChange={(e) => handleArrayInputChange(e, name)}
-            placeholder={`Enter ${label.toLowerCase()} separated by commas`}
-          />
-        ) : (
-          <input
-            type={type}
-            className="form-control"
-            name={name}
-            value={formData[name]}
-            onChange={handleInputChange}
-          />
-        )
+        <input
+          type={type}
+          className="form-control"
+          name={name}
+          value={formData[name]}
+          onChange={handleInputChange}
+        />
       ) : (
-        <p className="mb-0">{isArray ? value.join(', ') : value}</p>
+        <p className="mb-0">{value || t('Not specified')}</p>
       )}
     </div>
   );
@@ -97,35 +109,38 @@ const Profile = () => {
           </button>
         </div>
         <div className="card-body">
+          {error && (
+            <div className="alert alert-danger" role="alert">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="alert alert-success" role="alert">
+              {success}
+            </div>
+          )}
           <form onSubmit={handleSubmit}>
             <div className="row">
               <div className="col-md-4 text-center mb-4">
                 <img
-                  src={`https://ui-avatars.com/api/?name=${profile.name}&size=200`}
-                  alt={profile.name}
+                  src={profile.avatar || `https://ui-avatars.com/api/?name=${profile.firstName}+${profile.lastName}&size=200`}
+                  alt={`${profile.firstName} ${profile.lastName}`}
                   className="rounded-circle mb-3"
-                  style={{ width: 150, height: 150 }}
+                  style={{ width: 150, height: 150, objectFit: 'cover' }}
                 />
-                {isEditing && (
-                  <div className="mb-3">
-                    <input
-                      type="file"
-                      className="form-control"
-                      accept="image/*"
-                      onChange={(e) => {
-                        // TODO: Implement image upload
-                      }}
-                    />
-                  </div>
-                )}
               </div>
               <div className="col-md-8">
                 <div className="row">
                   <div className="col-md-6">
                     <ProfileField
-                      label={t('Full Name')}
-                      value={profile.name}
-                      name="name"
+                      label={t('First Name')}
+                      value={profile.firstName}
+                      name="firstName"
+                    />
+                    <ProfileField
+                      label={t('Last Name')}
+                      value={profile.lastName}
+                      name="lastName"
                     />
                     <ProfileField
                       label={t('Email')}
@@ -138,40 +153,17 @@ const Profile = () => {
                       value={profile.phone}
                       name="phone"
                     />
-                    <ProfileField
-                      label={t('Location')}
-                      value={profile.location}
-                      name="location"
-                    />
                   </div>
                   <div className="col-md-6">
                     <ProfileField
-                      label={t('Education')}
-                      value={profile.education}
-                      name="education"
+                      label={t('Profession')}
+                      value={profile.profession}
+                      name="profession"
                     />
                     <ProfileField
-                      label={t('Bio')}
-                      value={profile.bio}
-                      name="bio"
-                    />
-                    <ProfileField
-                      label={t('Interests')}
-                      value={profile.interests}
-                      name="interests"
-                      isArray
-                    />
-                    <ProfileField
-                      label={t('Skills')}
-                      value={profile.skills}
-                      name="skills"
-                      isArray
-                    />
-                    <ProfileField
-                      label={t('Languages')}
-                      value={profile.languages}
-                      name="languages"
-                      isArray
+                      label={t('Address')}
+                      value={profile.address}
+                      name="address"
                     />
                   </div>
                 </div>
