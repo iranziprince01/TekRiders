@@ -11,10 +11,26 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // Check for user data in localStorage on mount
     const storedUser = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
+      setLoading(false);
+    } else if (token) {
+      // If token exists but no user, fetch latest profile from backend
+      fetch('/api/users/profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(profile => {
+          const userData = { ...profile, token };
+          setUser(userData);
+          localStorage.setItem('user', JSON.stringify(userData));
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = async (email, password) => {

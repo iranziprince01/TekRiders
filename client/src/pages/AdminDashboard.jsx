@@ -47,30 +47,58 @@ const AdminDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [analytics, setAnalytics] = useState({ totalUsers: 0, totalCourses: 0, coursesByStatus: {}, usersByRole: {} });
+  const [courseStatusTab, setCourseStatusTab] = useState('all');
+  const [userRoleTab, setUserRoleTab] = useState('all');
+
+  const userTabs = [
+    { key: 'all', label: t('All') },
+    { key: 'learner', label: t('Learners') },
+    { key: 'tutor', label: t('Tutors') }
+  ];
+  const learners = users.filter(user => user.role === 'learner');
+  const tutors = users.filter(user => user.role === 'tutor');
+  const userRoles = {
+    all: users,
+    learner: learners,
+    tutor: tutors
+  };
 
   // Fetch data
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        setLoading(true);
-        const [usersData, coursesData, dbsData] = await Promise.all([
+        const [usersRes, coursesRes, analyticsRes, dbsRes] = await Promise.all([
           adminService.getUsers(),
           adminService.getCourses(),
+          adminService.getAnalytics(),
           adminService.getAllDatabases()
         ]);
-        setUsers(usersData);
-        setCourses(coursesData);
-        setDbs(dbsData);
+        setUsers(usersRes);
+        setCourses(coursesRes);
+        setAnalytics(analyticsRes);
+        setDbs(dbsRes);
       } catch (err) {
-        setError('Failed to load data. Please try again.');
-        console.error('Error fetching data:', err);
+        setError('Failed to load admin data.');
       } finally {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
+
+  // Refetch courses when switching to courses tab
+  useEffect(() => {
+    if (activeTab === 'courses') {
+      setLoading(true);
+      setError(null);
+      adminService.getCourses()
+        .then(setCourses)
+        .catch(() => setError('Failed to load courses.'))
+        .finally(() => setLoading(false));
+    }
+  }, [activeTab]);
 
   // Notification component
   const Notification = ({ message, type, onClose }) => (
@@ -283,6 +311,11 @@ const AdminDashboard = () => {
     return matchesSearch;
   });
 
+  // Filter courses by status
+  const approvedCourses = courses.filter(course => course.status === 'approved');
+  const rejectedCourses = courses.filter(course => course.status === 'rejected');
+  const pendingCourses = courses.filter(course => course.status === 'pending');
+
   // Paginate items
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -310,36 +343,40 @@ const AdminDashboard = () => {
         <h2 className="mb-4">{t('Admin Overview')}</h2>
         <div className="row g-4 mb-4">
           <div className="col-md-3">
-            <StatCard
-              icon={FiUsers}
-              value={users.length}
-              label={t('Total Users')}
-              color="primary"
-            />
+            <div className="card h-100 shadow-sm card-hover" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('users')}>
+              <div className="card-body d-flex flex-column align-items-center justify-content-center">
+                <span className="fs-1 mb-2"><i className="bi bi-people"></i></span>
+                <h4 className="mb-1">{analytics.totalUsers}</h4>
+                <div className="text-muted">{t('Total Users')}</div>
+              </div>
+            </div>
           </div>
           <div className="col-md-3">
-            <StatCard
-              icon={FiBook}
-              value={courses.length}
-              label={t('Total Courses')}
-              color="success"
-            />
+            <div className="card h-100 shadow-sm card-hover" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('courses')}>
+              <div className="card-body d-flex flex-column align-items-center justify-content-center">
+                <span className="fs-1 mb-2"><i className="bi bi-journal-bookmark"></i></span>
+                <h4 className="mb-1">{analytics.totalCourses}</h4>
+                <div className="text-muted">{t('Total Courses')}</div>
+              </div>
+            </div>
           </div>
           <div className="col-md-3">
-            <StatCard
-              icon={FiFlag}
-              value={courses.filter(c => c.status === 'flagged').length}
-              label={t('Flagged Content')}
-              color="warning"
-            />
+            <div className="card h-100 shadow-sm card-hover" style={{ cursor: 'pointer' }} onClick={() => navigate('/admin/courses/flagged')}>
+              <div className="card-body d-flex flex-column align-items-center justify-content-center">
+                <span className="fs-1 mb-2"><i className="bi bi-flag"></i></span>
+                <h4 className="mb-1">{analytics.coursesByStatus.flagged || 0}</h4>
+                <div className="text-muted">{t('Flagged Content')}</div>
+              </div>
+            </div>
           </div>
           <div className="col-md-3">
-            <StatCard
-              icon={FiAlertCircle}
-              value={courses.filter(c => c.status === 'pending').length}
-              label={t('Pending Reviews')}
-              color="danger"
-            />
+            <div className="card h-100 shadow-sm card-hover" style={{ cursor: 'pointer' }} onClick={() => navigate('/admin/courses/pending')}>
+              <div className="card-body d-flex flex-column align-items-center justify-content-center">
+                <span className="fs-1 mb-2"><i className="bi bi-exclamation-circle"></i></span>
+                <h4 className="mb-1">{analytics.coursesByStatus.pending || 0}</h4>
+                <div className="text-muted">{t('Pending Reviews')}</div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -390,209 +427,167 @@ const AdminDashboard = () => {
         </div>
       </div>
     );
-  } else if (activeTab === 'users') {
+  } else if (activeTab === 'dashboard') {
     mainContent = (
       <div className="container py-4">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h2>{t('User Management')}</h2>
-          <div className="d-flex gap-2">
-            <div className="input-group">
-              <span className="input-group-text bg-white">
-                <FiSearch />
-              </span>
-              <input
-                type="text"
-                className="form-control"
-                placeholder={t('Search users...')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+        <h2 className="mb-4">{t('Admin Dashboard')}</h2>
+        <div className="row g-4">
+          <div className="col-md-4">
+            <div className="card h-100 shadow-sm">
+              <div className="card-body">
+                <h5 className="card-title">{t('Approved Courses')}</h5>
+                <p className="card-text">{approvedCourses.length} courses</p>
+                <Link to="/admin/courses/approved" className="btn btn-primary">{t('View All')}</Link>
+              </div>
             </div>
-            <select
-              className="form-select"
-              value={filterRole}
-              onChange={(e) => setFilterRole(e.target.value)}
-            >
-              <option value="all">{t('All Roles')}</option>
-              <option value="learner">{t('Learners')}</option>
-              <option value="tutor">{t('Tutors')}</option>
-            </select>
-            <select
-              className="form-select"
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="all">{t('All Status')}</option>
-              <option value="active">{t('Active')}</option>
-              <option value="suspended">{t('Suspended')}</option>
-            </select>
           </div>
-        </div>
-
-        <div className="card border-0 shadow-sm">
-          <div className="table-responsive">
-            <table className="table table-hover mb-0">
-              <thead className="bg-light">
-                <tr>
-                  <th>{t('User')}</th>
-                  <th>{t('Role')}</th>
-                  <th>{t('Status')}</th>
-                  <th>{t('Join Date')}</th>
-                  <th>{t('Last Active')}</th>
-                  <th>{t('Actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentUsers.map(user => (
-                  <tr key={user.id}>
-                    <td>
-                      <div className="d-flex align-items-center">
-                        <div className="ms-3">
-                          <h6 className="mb-0">{user.name}</h6>
-                          <small className="text-muted">{user.email}</small>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`badge bg-${user.role === 'instructor' ? 'primary' : 'secondary'}-subtle text-${user.role === 'instructor' ? 'primary' : 'secondary'}`}>
-                        {user.role}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`badge bg-${user.status === 'active' ? 'success' : 'danger'}-subtle text-${user.status === 'active' ? 'success' : 'danger'}`}>
-                        {user.status}
-                      </span>
-                    </td>
-                    <td>{new Date(user.joinDate).toLocaleDateString()}</td>
-                    <td>{new Date(user.lastActive).toLocaleDateString()}</td>
-                    <td>
-                      <div className="btn-group">
-                        <button
-                          className="btn btn-sm btn-outline-primary"
-                          onClick={() => handleUserAction(user.id, 'view')}
-                        >
-                          <FiUserCheck />
-                        </button>
-                        <button
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={() => handleUserAction(user.id, 'suspend')}
-                        >
-                          <FiUserX />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="col-md-4">
+            <div className="card h-100 shadow-sm">
+              <div className="card-body">
+                <h5 className="card-title">{t('Rejected Courses')}</h5>
+                <p className="card-text">{rejectedCourses.length} courses</p>
+                <Link to="/admin/courses/rejected" className="btn btn-primary">{t('View All')}</Link>
+              </div>
+            </div>
           </div>
-          <div className="card-footer bg-white">
-            <Pagination
-              totalItems={filteredUsers.length}
-              currentPage={currentPage}
-              onPageChange={setCurrentPage}
-            />
+          <div className="col-md-4">
+            <div className="card h-100 shadow-sm">
+              <div className="card-body">
+                <h5 className="card-title">{t('Pending Courses')}</h5>
+                <p className="card-text">{pendingCourses.length} courses</p>
+                <Link to="/admin/courses/pending" className="btn btn-primary">{t('View All')}</Link>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-6">
+            <div className="card h-100 shadow-sm">
+              <div className="card-body">
+                <h5 className="card-title">{t('Tutors')}</h5>
+                <p className="card-text">{tutors.length} tutors</p>
+                <Link to="/admin/users/tutors" className="btn btn-primary">{t('View All')}</Link>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-6">
+            <div className="card h-100 shadow-sm">
+              <div className="card-body">
+                <h5 className="card-title">{t('Learners')}</h5>
+                <p className="card-text">{learners.length} learners</p>
+                <Link to="/admin/users/learners" className="btn btn-primary">{t('View All')}</Link>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     );
-  } else if (activeTab === 'courses') {
+  } else if (activeTab === 'users') {
     mainContent = (
       <div className="container py-4">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h2>{t('Course Moderation')}</h2>
-          <div className="input-group" style={{ maxWidth: '300px' }}>
-            <span className="input-group-text bg-white">
-              <FiSearch />
-            </span>
-            <input
-              type="text"
-              className="form-control"
-              placeholder={t('Search courses...')}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+        <h2 className="mb-4">{t('User Management')}</h2>
+        <div className="mb-3 d-flex gap-2">
+          {userTabs.map(tab => (
+            <button
+              key={tab.key}
+              className={`btn btn-${userRoleTab === tab.key ? 'primary' : 'outline-primary'}`}
+              onClick={() => setUserRoleTab(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
-
-        <div className="card border-0 shadow-sm">
-          <div className="table-responsive">
-            <table className="table table-hover mb-0">
-              <thead className="bg-light">
-                <tr>
-                  <th>{t('Course')}</th>
-                  <th>{t('Instructor')}</th>
-                  <th>{t('Status')}</th>
-                  <th>{t('Submitted')}</th>
-                  <th>{t('Flags')}</th>
-                  <th>{t('Actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentCourses.map(course => (
-                  <tr key={course.id}>
-                    <td>
-                      <h6 className="mb-0">{course.title}</h6>
-                    </td>
-                    <td>{course.instructor}</td>
-                    <td>
-                      <span className={`badge bg-${
-                        course.status === 'pending' ? 'warning' :
-                        course.status === 'flagged' ? 'danger' :
-                        'success'
-                      }-subtle text-${
-                        course.status === 'pending' ? 'warning' :
-                        course.status === 'flagged' ? 'danger' :
-                        'success'
-                      }`}>
-                        {course.status}
-                      </span>
-                    </td>
-                    <td>{new Date(course.submittedDate).toLocaleDateString()}</td>
-                    <td>
-                      {course.flags > 0 ? (
-                        <span className="badge bg-danger-subtle text-danger">
-                          {course.flags} {t('flags')}
-                        </span>
+        <div className="row g-4">
+          {userRoles[userRoleTab].length === 0 ? (
+            <div className="alert alert-info">{t('No users found.')}</div>
+          ) : (
+            userRoles[userRoleTab].map(user => (
+              <div key={user.id} className="col-md-4">
+                <div className="card h-100 shadow-sm">
+                  <div className="card-body">
+                    <h5 className="card-title">{user.name}</h5>
+                    <p className="card-text">{user.email}</p>
+                    <div className="mb-2"><strong>{t('Role')}:</strong> {user.role}</div>
+                    <div className="mb-2"><strong>{t('Status')}:</strong> {user.status}</div>
+                    <div className="d-flex gap-2 mt-2">
+                      <button className="btn btn-sm btn-outline-primary" onClick={() => { setSelectedItem(user); setModalType('view'); setShowModal(true); }}>{t('View')}</button>
+                      {user.status !== 'suspended' ? (
+                        <button className="btn btn-sm btn-outline-danger" onClick={() => handleUserAction(user.id, 'suspend')}>{t('Suspend')}</button>
                       ) : (
-                        <span className="text-muted">-</span>
+                        <button className="btn btn-sm btn-outline-success" onClick={() => handleUserAction(user.id, 'activate')}>{t('Activate')}</button>
                       )}
-                    </td>
-                    <td>
-                      <div className="btn-group">
-                        <button
-                          className="btn btn-sm btn-outline-success"
-                          onClick={() => handleCourseAction(course.id, 'approve')}
-                        >
-                          <FiCheckCircle />
-                        </button>
-                        <button
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={() => handleCourseAction(course.id, 'reject')}
-                        >
-                          <FiXCircle />
-                        </button>
-                        <button
-                          className="btn btn-sm btn-outline-warning"
-                          onClick={() => handleCourseAction(course.id, 'flag')}
-                        >
-                          <FiFlag />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="card-footer bg-white">
-            <Pagination
-              totalItems={filteredCourses.length}
-              currentPage={currentPage}
-              onPageChange={setCurrentPage}
-            />
-          </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
+      </div>
+    );
+  } else if (activeTab === 'courses') {
+    const statusTabs = [
+      { key: 'all', label: t('All') },
+      { key: 'approved', label: t('Approved') },
+      { key: 'pending', label: t('Pending') },
+      { key: 'rejected', label: t('Rejected') }
+    ];
+    const statusCourses = {
+      all: courses,
+      approved: approvedCourses,
+      pending: pendingCourses,
+      rejected: rejectedCourses
+    };
+    mainContent = (
+      <div className="container py-4">
+        <h2 className="mb-4">{t('Courses')}</h2>
+        <div className="mb-3 d-flex gap-2">
+          {statusTabs.map(tab => (
+            <button
+              key={tab.key}
+              className={`btn btn-${courseStatusTab === tab.key ? 'primary' : 'outline-primary'}`}
+              onClick={() => setCourseStatusTab(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        {loading ? (
+          <div className="text-center py-5"><FiLoader className="display-4 text-primary animate-spin" /></div>
+        ) : error ? (
+          <div className="alert alert-danger">{error}</div>
+        ) : (
+          <div className="row g-4">
+            {statusCourses[courseStatusTab].length === 0 ? (
+              <div className="alert alert-info">{t('No courses found.')}</div>
+            ) : (
+              statusCourses[courseStatusTab].map(course => (
+                <div key={course.id} className="col-md-4">
+                  <div className="card h-100 shadow-sm">
+                    <div className="card-body">
+                      <h5 className="card-title">{course.title}</h5>
+                      <p className="card-text">{course.description}</p>
+                      <div className="mb-2"><strong>{t('Instructor')}:</strong> {course.instructor}</div>
+                      <div className="mb-2"><strong>{t('Status')}:</strong> {course.status}</div>
+                      <div className="d-flex gap-2 mt-2">
+                        {course.status === 'pending' && (
+                          <>
+                            <button className="btn btn-sm btn-outline-success" onClick={() => handleCourseAction(course.id, 'approve')}>{t('Approve')}</button>
+                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleCourseAction(course.id, 'reject')}>{t('Reject')}</button>
+                          </>
+                        )}
+                        {course.status === 'approved' && (
+                          <button className="btn btn-sm btn-outline-danger" onClick={() => handleCourseAction(course.id, 'reject')}>{t('Reject')}</button>
+                        )}
+                        {course.status === 'rejected' && (
+                          <button className="btn btn-sm btn-outline-success" onClick={() => handleCourseAction(course.id, 'approve')}>{t('Approve')}</button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     );
   }

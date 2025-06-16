@@ -11,8 +11,7 @@ try {
   const adminRoutes = require('./routes/admin');
   const { nanoInstance } = require('./db');
   const session = require('express-session');
-  const passport = require('passport');
-  require('./passport'); // Google OAuth strategy setup
+  const bodyParser = require('body-parser');
 
   const app = express();
 
@@ -21,8 +20,8 @@ try {
     origin: 'http://localhost:5173',
     credentials: true,
   }));
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+  app.use(bodyParser.json({ limit: '10mb' }));
+  app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
 
   // Session middleware (required for passport)
   app.use(session({
@@ -31,8 +30,6 @@ try {
     saveUninitialized: false,
     cookie: { secure: false } // set to true if using HTTPS
   }));
-  app.use(passport.initialize());
-  app.use(passport.session());
 
   // Routes
   app.use('/api/auth', authRoutes);

@@ -14,7 +14,12 @@ router.get('/users', isAdmin, async (req, res) => {
       role: row.doc.role,
       status: row.doc.status || 'active',
       joinDate: row.doc.createdAt,
-      lastActive: row.doc.lastActive || row.doc.createdAt
+      lastActive: row.doc.lastActive || row.doc.createdAt,
+      firstName: row.doc.firstName,
+      lastName: row.doc.lastName,
+      phone: row.doc.phone,
+      address: row.doc.address,
+      avatar: row.doc.avatar
     })));
   } catch (error) {
     res.status(500).json({ message: 'Error fetching users' });
@@ -90,6 +95,18 @@ router.post('/courses/:id/flag', isAdmin, async (req, res) => {
   }
 });
 
+// Moderate course (approve/reject)
+router.put('/courses/:id/moderate', isAdmin, async (req, res) => {
+  try {
+    const course = await db.courses.get(req.params.id);
+    course.status = req.body.status;
+    await db.courses.insert(course);
+    res.json({ message: 'Course status updated' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error moderating course' });
+  }
+});
+
 // Get all CouchDB database names
 router.get('/dbs', isAdmin, async (req, res) => {
   try {
@@ -97,6 +114,29 @@ router.get('/dbs', isAdmin, async (req, res) => {
     res.json(dbs);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching database list' });
+  }
+});
+
+// Admin analytics endpoint
+router.get('/analytics', isAdmin, async (req, res) => {
+  try {
+    const users = await db.users.list({ include_docs: true });
+    const courses = await db.courses.list({ include_docs: true });
+    const totalUsers = users.rows.length;
+    const totalCourses = courses.rows.length;
+    const coursesByStatus = {};
+    const usersByRole = {};
+    courses.rows.forEach(row => {
+      const status = row.doc.status || 'unknown';
+      coursesByStatus[status] = (coursesByStatus[status] || 0) + 1;
+    });
+    users.rows.forEach(row => {
+      const role = row.doc.role || 'unknown';
+      usersByRole[role] = (usersByRole[role] || 0) + 1;
+    });
+    res.json({ totalUsers, totalCourses, coursesByStatus, usersByRole });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching analytics data' });
   }
 });
 

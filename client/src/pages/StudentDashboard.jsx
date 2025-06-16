@@ -3,12 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   FiBook, FiUser, FiBell, FiBarChart2, FiCalendar, 
-  FiBookmark, FiDownload, FiSettings, FiLogOut, FiAward, FiTarget, FiVolume2, FiGlobe, FiHeadphones, FiMic, FiEye, FiMessageCircle, FiStar, FiPieChart, FiCheckCircle, FiFolder, FiFileText, FiBarChart, FiChevronDown, FiChevronUp
+  FiBookmark, FiDownload, FiSettings, FiLogOut, FiAward, FiTarget, FiVolume2, FiGlobe, FiHeadphones, FiMic, FiEye, FiMessageCircle, FiStar, FiPieChart, FiCheckCircle, FiFolder, FiFileText, FiBarChart, FiChevronDown, FiChevronUp, FiHome
 } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import Profile from '../components/Profile';
 import { useAuth } from '../contexts/AuthContext';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import axios from 'axios';
 
 const LearnerDashboard = () => {
   const { t } = useTranslation();
@@ -25,6 +26,11 @@ const LearnerDashboard = () => {
   });
   const [timeRange, setTimeRange] = useState('week');
   const [expanded, setExpanded] = useState({});
+  const [approvedCourses, setApprovedCourses] = useState([]);
+  const [homeLoading, setHomeLoading] = useState(false);
+  const [homeError, setHomeError] = useState('');
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
 
   const toggleSection = (section) => setExpanded(prev => ({ ...prev, [section]: !prev[section] }));
 
@@ -44,79 +50,14 @@ const LearnerDashboard = () => {
     </div>
   );
 
+  // Sidebar menu items for learner dashboard (no dropdowns, new order)
   const sidebarMenus = [
-    {
-      section: 'MY COURSES',
-      icon: FiBook,
-      key: 'courses',
-      items: [
-        { label: 'Current Courses', tab: 'currentCourses', icon: FiBook },
-        { label: 'Completed Courses', tab: 'completedCourses', icon: FiCheckCircle },
-        { label: 'Downloaded (Offline)', tab: 'downloadedCourses', icon: FiDownload },
-        { label: 'Bookmarked', tab: 'bookmarked', icon: FiBookmark },
-      ]
-    },
-    {
-      section: 'DOWNLOADS',
-      icon: FiDownload,
-      key: 'downloads',
-      items: [
-        { label: 'Downloaded Courses', tab: 'downloadedCourses', icon: FiFolder },
-        { label: 'Offline Lessons', tab: 'offlineLessons', icon: FiFileText },
-        { label: 'Audio Files', tab: 'audioFiles', icon: FiHeadphones },
-        { label: 'Storage Management', tab: 'storage', icon: FiPieChart },
-      ]
-    },
-    {
-      section: 'MY PROGRESS',
-      icon: FiTarget,
-      key: 'progress',
-      items: [
-        { label: 'Learning Progress', tab: 'learningProgress', icon: FiBarChart },
-        { label: 'Test Results & Scores', tab: 'testResults', icon: FiBarChart2 },
-        { label: 'Certificates Earned', tab: 'certificates', icon: FiAward },
-        { label: 'Study Statistics', tab: 'studyStats', icon: FiPieChart },
-      ]
-    },
-    {
-      section: 'ACHIEVEMENTS',
-      icon: FiAward,
-      key: 'achievements',
-      items: [
-        { label: 'Badges & Certificates', tab: 'badges', icon: FiStar },
-      ]
-    },
-    {
-      section: 'AI ASSISTANT',
-      icon: FiMessageCircle,
-      key: 'ai',
-      items: [
-        { label: 'Chat Support', tab: 'chatSupport', icon: FiMessageCircle },
-        { label: 'Voice Commands', tab: 'voiceCommands', icon: FiMic },
-      ]
-    },
-    {
-      section: 'ACCESSIBILITY',
-      icon: FiVolume2,
-      key: 'accessibility',
-      items: [
-        { label: 'Language Settings (Kinyarwanda/English)', tab: 'language', icon: FiGlobe },
-        { label: 'Audio Controls', tab: 'audioControls', icon: FiHeadphones },
-        { label: 'Voice-to-Text', tab: 'voiceToText', icon: FiMic },
-        { label: 'Display Settings', tab: 'displaySettings', icon: FiEye },
-      ]
-    },
-    {
-      section: 'SETTINGS',
-      icon: FiSettings,
-      key: 'settings',
-      items: [
+    { label: 'Home', tab: 'home', icon: FiHome },
+    { label: 'My Courses', tab: 'courses', icon: FiBook },
+    { label: 'Progress', tab: 'progress', icon: FiTarget },
+    { label: 'Achievements', tab: 'achievements', icon: FiAward },
+    { label: 'Accessibility', tab: 'accessibility', icon: FiVolume2 },
         { label: 'Profile', tab: 'profile', icon: FiUser },
-        { label: 'Preferences', tab: 'preferences', icon: FiSettings },
-        { label: 'Notifications', tab: 'notifications', icon: FiBell },
-        { label: 'Account', tab: 'account', icon: FiUser },
-      ]
-    },
   ];
 
   // Mock data - replace with actual API calls
@@ -144,6 +85,33 @@ const LearnerDashboard = () => {
       // Add more notifications...
     ]);
   }, []);
+
+  // Fetch approved courses for Home tab
+  useEffect(() => {
+    if (activeTab === 'home') {
+      setHomeLoading(true);
+      setHomeError('');
+      axios.get('/api/courses/approved')
+        .then(res => {
+          setApprovedCourses(res.data);
+          setHomeLoading(false);
+        })
+        .catch(err => {
+          setHomeError('Failed to load courses.');
+          setHomeLoading(false);
+        });
+    }
+  }, [activeTab]);
+
+  // Unique categories for filter
+  const categories = Array.from(new Set(approvedCourses.map(c => c.category).filter(Boolean)));
+
+  // Filtered courses
+  const filteredCourses = approvedCourses.filter(course => {
+    const matchesSearch = course.title.toLowerCase().includes(search.toLowerCase()) || (course.description && course.description.toLowerCase().includes(search.toLowerCase()));
+    const matchesCategory = !category || course.category === category;
+    return matchesSearch && matchesCategory;
+  });
 
   const enrollmentData = [
     { name: 'Mon', value: 4 },
@@ -197,6 +165,10 @@ const LearnerDashboard = () => {
       <span>{toTitleCase(label)}</span>
     </motion.div>
   );
+
+  // Get user details from AuthContext
+  const displayName = user?.firstName || user?.name || user?.email?.split('@')[0] || '';
+  const avatarUrl = user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&size=200`;
 
   const renderContent = () => {
     switch (activeTab) {
@@ -259,6 +231,62 @@ const LearnerDashboard = () => {
                 </div>
               ))}
             </div>
+          </div>
+        );
+      case 'home':
+        return (
+          <div className="container-fluid px-0">
+            <div className="d-flex flex-wrap align-items-center mb-4 gap-3">
+              <input
+                className="form-control"
+                style={{ maxWidth: 320 }}
+                placeholder={t('Search courses...')}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              <select
+                className="form-select"
+                style={{ maxWidth: 220 }}
+                value={category}
+                onChange={e => setCategory(e.target.value)}
+              >
+                <option value="">{t('All Categories')}</option>
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+            {homeLoading ? (
+              <div className="text-center py-5">{t('Loading...')}</div>
+            ) : homeError ? (
+              <div className="alert alert-danger">{homeError}</div>
+            ) : filteredCourses.length === 0 ? (
+              <div className="alert alert-info">{t('No courses found.')}</div>
+            ) : (
+              <div className="row g-4">
+                {filteredCourses.map(course => (
+                  <div key={course._id} className="col-md-4 col-lg-3">
+                    <div className="card h-100 border-0 shadow-sm">
+                      <img
+                        src={course.thumbnail ? `/uploads/${course.thumbnail}` : 'https://picsum.photos/300/200'}
+                        className="card-img-top"
+                        alt={course.title}
+                        style={{ height: 160, objectFit: 'cover' }}
+                      />
+                      <div className="card-body">
+                        <h6 className="card-title fw-bold">{course.title}</h6>
+                        <p className="text-muted small mb-2">{course.category} &bull; {course.language?.toUpperCase()}</p>
+                        <p className="small mb-2" style={{ minHeight: 48 }}>{course.description?.slice(0, 80)}{course.description?.length > 80 ? '...' : ''}</p>
+                        <div className="d-flex align-items-center mt-2">
+                          <span className="me-2" style={{ fontSize: 13, color: '#888' }}>{t('By')} {course.authorEmail || course.author || 'Tutor'}</span>
+                        </div>
+                        <Link to={`/course/${course._id}`} className="btn btn-sm btn-primary mt-3 w-100">{t('View Course')}</Link>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       default:
@@ -364,27 +392,41 @@ const LearnerDashboard = () => {
   return (
     <div className="dashboard-container d-flex" style={{ minHeight: '100vh', background: 'linear-gradient(120deg, #e6f6fc 60%, #fafdff 100%)' }}>
       {/* Sidebar */}
-      <div className="sidebar border-end shadow-lg" style={{ width: 300, position: 'fixed', height: '100vh', overflowY: 'auto', background: 'rgba(255,255,255,0.97)', borderRadius: '0 2rem 2rem 0', boxShadow: '0 4px 32px rgba(56, 189, 248, 0.10)' }}>
-        <div className="p-4" style={{paddingTop: '4.5rem', paddingBottom: '2.5rem'}}>
-          {sidebarMenus.map(section => (
-            <SidebarSection key={section.key} icon={section.icon} title={section.section} sectionKey={section.key}>
-              {section.items.map(item => (
-                <SidebarItem
+      <div className="sidebar border-end shadow-lg d-flex flex-column" style={{ width: 300, position: 'fixed', height: '100vh', background: 'rgba(255,255,255,0.97)', borderRadius: '0 2rem 2rem 0', boxShadow: '0 4px 32px rgba(56, 189, 248, 0.10)', justifyContent: 'space-between' }}>
+        <div className="p-4" style={{ marginTop: '2.5rem' }}>
+          {sidebarMenus.map((item, idx) => (
+            <motion.div
                   key={item.tab}
-                  icon={item.icon}
-                  label={item.label}
-                  active={activeTab === item.tab}
+              whileHover={{ scale: 1.03, backgroundColor: 'rgba(56, 189, 248, 0.08)' }}
+              whileTap={{ scale: 0.98 }}
+              className={`sidebar-item d-flex align-items-center rounded-4 px-3 py-2 fw-normal ${activeTab === item.tab ? 'bg-primary text-white shadow-sm' : ''}`}
                   onClick={() => setActiveTab(item.tab)}
-                />
-              ))}
-            </SidebarSection>
+              style={{
+                cursor: 'pointer',
+                transition: 'background 0.2s, color 0.2s',
+                fontSize: '0.98rem',
+                letterSpacing: '0.01em',
+                boxShadow: activeTab === item.tab ? '0 2px 8px rgba(56, 189, 248, 0.13)' : undefined,
+                color: activeTab === item.tab ? undefined : '#666',
+                textTransform: 'none',
+                fontWeight: activeTab === item.tab ? 500 : 400,
+                marginBottom: idx !== sidebarMenus.length - 1 ? '1.2rem' : 0 // Add gap between items
+              }}
+            >
+              <item.icon className="me-3" size={19} />
+              <span>{toTitleCase(item.label)}</span>
+            </motion.div>
           ))}
-          <SidebarItem
-            icon={FiLogOut}
-            label={t('Logout')}
-            active={false}
+        </div>
+        <div className="p-4" style={{ position: 'absolute', bottom: '7rem', width: '100%' }}>
+          <div
+            className="sidebar-item d-flex align-items-center p-3 rounded-3 cursor-pointer text-danger"
             onClick={() => { logout(); navigate('/login'); }}
-          />
+            style={{ cursor: 'pointer', color: '#e53935', fontWeight: 600, fontSize: '1.08rem', background: 'none' }}
+          >
+            <FiLogOut className="me-3" size={20} />
+            <span>{t('Logout')}</span>
+          </div>
         </div>
       </div>
 
@@ -393,7 +435,18 @@ const LearnerDashboard = () => {
         <div className="p-4">
           {/* Header */}
           <div className="d-flex justify-content-between align-items-center mb-4">
-            <h2 className="mb-0">{t('Welcome back')}, <span className="text-primary">John</span></h2>
+            <div className="d-flex align-items-center gap-3">
+              <img
+                src={avatarUrl}
+                alt={displayName}
+                className="rounded-circle"
+                style={{ width: 44, height: 44, objectFit: 'cover', border: '2px solid #e3e3e3' }}
+              />
+              <div>
+                <h2 className="mb-0" style={{ fontSize: '1.45rem' }}>{t('Welcome back')}, <span className="text-primary">{displayName}</span></h2>
+                <div className="text-muted" style={{ fontSize: '1.02rem' }}>{user?.email}</div>
+              </div>
+            </div>
             <div className="d-flex align-items-center">
               <div className="position-relative me-3">
                 <FiBell size={24} className="text-muted" />
@@ -402,15 +455,6 @@ const LearnerDashboard = () => {
                     {notifications.length}
                   </span>
                 )}
-              </div>
-              <div className="dropdown">
-                <img 
-                  src="https://ui-avatars.com/api/?name=John+Doe" 
-                  alt="Profile" 
-                  className="rounded-circle" 
-                  style={{ width: 40, height: 40, cursor: 'pointer' }}
-                  data-bs-toggle="dropdown"
-                />
               </div>
             </div>
           </div>

@@ -10,7 +10,7 @@ import Modal from 'react-bootstrap/Modal';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 
-const API_URL = 'http://localhost:3000/api'; // Adjusted to match backend server
+const API_URL = import.meta.env.VITE_API_URL + '/api';
 
 const TABS = [
   { key: 'courses', label: 'My Courses', icon: FiBook },
@@ -59,6 +59,12 @@ export default function TutorDashboard() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editCourse, setEditCourse] = useState(null);
   const [editFormData, setEditFormData] = useState({});
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [enrolledStudents, setEnrolledStudents] = useState([]);
+  const [showEnrolledModal, setShowEnrolledModal] = useState(false);
+  const [quizSubmissions, setQuizSubmissions] = useState([]);
+  const [showQuizModal, setShowQuizModal] = useState(false);
+  const [grading, setGrading] = useState({}); // { [quizId]: score }
 
   // Fetch tutor's courses
   const fetchCourses = async () => {
@@ -232,6 +238,8 @@ export default function TutorDashboard() {
                   <button className="btn d-flex align-items-center justify-content-center" style={{ border: '2px solid #2997f7', color: '#2997f7', fontWeight: 600, fontSize: '1rem', borderRadius: 7, padding: '0.35rem 1.2rem', background: 'none', minWidth: 90, height: 40 }} onClick={() => handleEdit(course)}>{t('Update')}</button>
                   <button className="btn d-flex align-items-center justify-content-center" style={{ border: '2px solid #bbb', color: '#444', fontWeight: 600, fontSize: '1rem', borderRadius: 7, padding: '0.35rem 1.2rem', background: 'none', minWidth: 90, height: 40 }}>{t('Analytics')}</button>
                   <button className="btn d-flex align-items-center justify-content-center" style={{ border: '2px solid #f44336', color: '#f44336', fontWeight: 600, fontSize: '1rem', borderRadius: 7, padding: '0.35rem 1.2rem', background: 'none', minWidth: 90, height: 40 }} onClick={() => handleDelete(course._id)}>{t('Delete')}</button>
+                  <button className="btn btn-sm btn-outline-info me-2" onClick={() => handleViewEnrolled(course._id)}>View Enrolled Students</button>
+                  <button className="btn btn-sm btn-outline-secondary" onClick={() => handleViewQuizzes(course._id)}>View Quiz Submissions</button>
                 </div>
               </div>
             </div>
@@ -389,6 +397,59 @@ export default function TutorDashboard() {
     console.log('Analytics for course:', courseId);
   };
 
+  // Fetch enrolled students for a course
+  const handleViewEnrolled = async (courseId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/courses/${courseId}/enrolled`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setEnrolledStudents(data);
+      setSelectedCourse(courseId);
+      setShowEnrolledModal(true);
+    } catch (err) {
+      setEnrolledStudents([]);
+      setShowEnrolledModal(true);
+    }
+  };
+
+  // Fetch quiz submissions for a course
+  const handleViewQuizzes = async (courseId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/courses/${courseId}/quizzes`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setQuizSubmissions(data);
+      setSelectedCourse(courseId);
+      setShowQuizModal(true);
+    } catch (err) {
+      setQuizSubmissions([]);
+      setShowQuizModal(true);
+    }
+  };
+
+  // Grade a quiz
+  const handleGradeQuiz = async (quizId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const score = grading[quizId];
+      await fetch(`/api/courses/quiz/${quizId}/grade`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ score })
+      });
+      setQuizSubmissions(qs => qs.map(q => q._id === quizId ? { ...q, graded: true, score } : q));
+    } catch (err) {
+      alert('Failed to grade quiz');
+    }
+  };
+
   return (
     <div className="dashboard-container d-flex" style={{ minHeight: '100vh' }}>
       {/* Sidebar */}
@@ -421,6 +482,85 @@ export default function TutorDashboard() {
           />
         </Modal.Body>
       </Modal>
+      {/* Modal for enrolled students */}
+      {showEnrolledModal && (
+        <div className="modal show d-block" tabIndex="-1" role="dialog">
+          <div className="modal-dialog" role="document">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Enrolled Students</h5>
+                <button type="button" className="btn-close" onClick={() => setShowEnrolledModal(false)}></button>
+              </div>
+              <div className="modal-body">
+                {enrolledStudents.length === 0 ? (
+                  <div>No students enrolled.</div>
+                ) : (
+                  <ul className="list-group">
+                    {enrolledStudents.map(student => (
+                      <li key={student._id} className="list-group-item">
+                        {student.name || student.email} ({student.email})
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal for quiz submissions */}
+      {showQuizModal && (
+        <div className="modal show d-block" tabIndex="-1" role="dialog">
+          <div className="modal-dialog modal-lg" role="document">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Quiz Submissions</h5>
+                <button type="button" className="btn-close" onClick={() => setShowQuizModal(false)}></button>
+              </div>
+              <div className="modal-body">
+                {quizSubmissions.length === 0 ? (
+                  <div>No quiz submissions yet.</div>
+                ) : (
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Learner</th>
+                        <th>Answers</th>
+                        <th>Score</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {quizSubmissions.map(q => (
+                        <tr key={q._id}>
+                          <td>{q.learnerId}</td>
+                          <td>{JSON.stringify(q.answers)}</td>
+                          <td>{q.graded ? q.score : '-'}</td>
+                          <td>
+                            {!q.graded && (
+                              <div className="d-flex align-items-center">
+                                <input
+                                  type="number"
+                                  className="form-control form-control-sm me-2"
+                                  style={{ width: 80 }}
+                                  value={grading[q._id] || ''}
+                                  onChange={e => setGrading(g => ({ ...g, [q._id]: e.target.value }))}
+                                  placeholder="Score"
+                                />
+                                <button className="btn btn-sm btn-success" onClick={() => handleGradeQuiz(q._id)}>Grade</button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

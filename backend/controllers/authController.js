@@ -14,7 +14,7 @@ exports.register = async (req, res) => {
   
   const { email, phone, password, role } = req.body;
   if ((!email && !phone) || !password || !role) {
-    return res.status(400).json({ message: 'Email or phone, password, and role are required.' });
+    return res.status(400).json({ message: 'Email, password, and role are required.' });
   }
   if (!['learner', 'tutor'].includes(role)) {
     return res.status(400).json({ message: 'Role must be learner or tutor.' });

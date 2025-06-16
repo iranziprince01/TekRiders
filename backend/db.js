@@ -1,11 +1,12 @@
 const nano = require('nano');
+const couch = nano('http://192.168.1.66:5984');
 require('dotenv').config();
 
 // Log environment variables (without password)
-console.log('CouchDB URL:', process.env.COUCHDB_URL);
+console.log('CouchDB URL:', process.env.COUCHDB_URL || 'http://192.168.1.66:5984');
 console.log('CouchDB User:', process.env.COUCHDB_USER);
 
-const couchUrl = process.env.COUCHDB_URL;
+const couchUrl = process.env.COUCHDB_URL || 'http://192.168.1.66:5984';
 const couchUser = process.env.COUCHDB_USER;
 const couchPass = process.env.COUCHDB_PASS;
 
@@ -68,5 +69,6 @@ ensureDbs();
 module.exports = {
   nanoInstance,
   users: usersDb,
-  courses: coursesDb
+  courses: coursesDb,
+  // Add other databases as needed
 };

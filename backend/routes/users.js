@@ -9,11 +9,14 @@ router.get('/profile', isAuth, async (req, res) => {
     const user = await db.users.get(req.user._id);
     res.json({
       id: user._id,
-      name: user.name,
       email: user.email,
       role: user.role,
       avatar: user.avatar,
-      createdAt: user.createdAt
+      createdAt: user.createdAt,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      address: user.address
     });
   } catch (error) {
     console.error('Error fetching user profile:', error);

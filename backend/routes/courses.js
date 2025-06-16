@@ -88,7 +88,7 @@ router.post('/', isAuth, isTutor, upload.fields([
       ...files,
       author: req.user._id,
       authorEmail: req.user.email,
-      status: 'draft',
+      status: 'pending',
       createdAt: new Date().toISOString(),
       type: 'course',
       enrolled: 0,
@@ -194,6 +194,76 @@ router.get('/approved', async (req, res) => {
     res.json(result.docs);
   } catch (err) {
     res.status(500).json({ message: 'Error fetching approved courses', error: err.message });
+  }
+});
+
+// Get a course by ID (public, for learners)
+router.get('/:id', async (req, res) => {
+  console.log('Fetching course with ID:', req.params.id);
+  try {
+    const course = await db.courses.get(req.params.id);
+    res.json(course);
+  } catch (err) {
+    console.error('Error fetching course:', err, err.stack);
+    res.status(404).json({ message: 'Course not found', error: err.message });
+  }
+});
+
+// Get enrolled students for a course
+router.get('/:id/enrolled', isAuth, isTutor, async (req, res) => {
+  try {
+    const course = await db.courses.get(req.params.id);
+    // Assume course.enrolled is an array of learner IDs
+    const learners = course.enrolled && course.enrolled.length > 0
+      ? (await db.users.find({ selector: { _id: { $in: course.enrolled } } })).docs
+      : [];
+    res.json(learners);
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching enrolled students', error: err.message });
+  }
+});
+
+// Submit a quiz (learner)
+router.post('/:id/quiz', isAuth, async (req, res) => {
+  try {
+    const { answers } = req.body;
+    const quizSubmission = {
+      courseId: req.params.id,
+      learnerId: req.user._id,
+      answers,
+      graded: false,
+      score: null,
+      submittedAt: new Date().toISOString()
+    };
+    const result = await db.quizzes.insert(quizSubmission);
+    res.status(201).json({ ...quizSubmission, _id: result.id });
+  } catch (err) {
+    res.status(500).json({ message: 'Error submitting quiz', error: err.message });
+  }
+});
+
+// Get quiz submissions for a course (tutor)
+router.get('/:id/quizzes', isAuth, isTutor, async (req, res) => {
+  try {
+    const result = await db.quizzes.find({ selector: { courseId: req.params.id } });
+    res.json(result.docs);
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching quizzes', error: err.message });
+  }
+});
+
+// Grade a quiz (tutor)
+router.put('/quiz/:quizId/grade', isAuth, isTutor, async (req, res) => {
+  try {
+    const { score } = req.body;
+    const quiz = await db.quizzes.get(req.params.quizId);
+    quiz.graded = true;
+    quiz.score = score;
+    quiz.gradedAt = new Date().toISOString();
+    const result = await db.quizzes.insert(quiz);
+    res.json({ ...quiz, _rev: result.rev });
+  } catch (err) {
+    res.status(500).json({ message: 'Error grading quiz', error: err.message });
   }
 });
 

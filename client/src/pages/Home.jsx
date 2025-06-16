@@ -426,14 +426,14 @@ const Home = () => {
               {t('Join a movement of change-makers. Register, log in, or explore our courses to begin your learning adventure.')}
             </p>
             <div style={{display: 'flex', gap: '2rem', flexWrap: 'wrap', alignItems: 'center'}}>
-              <Link to="/signup" className="btn cta-btn cta-btn-filled" style={{background: '#fff', color: '#38a6f7', fontWeight: 700, fontSize: '1.35rem', borderRadius: 10, padding: '1.1rem 2.7rem', border: 'none', display: 'flex', alignItems: 'center', gap: '0.8rem', boxShadow: '0 2px 12px rgba(56, 189, 248, 0.10)'}}>
-                <i className="bi bi-person-circle" style={{fontSize: '1.5rem'}}></i> {t('Register')}
+              <Link to="/signup" className="btn cta-btn cta-btn-filled" style={{background: '#fff', color: '#38a6f7', fontWeight: 700, fontSize: '0.98rem', borderRadius: 7, padding: '0.5rem 1.2rem', border: 'none', display: 'flex', alignItems: 'center', gap: '0.4rem', boxShadow: '0 2px 8px rgba(56, 189, 248, 0.10)'}}>
+                <i className="bi bi-person-circle" style={{fontSize: '1.1rem'}}></i> {t('Register')}
               </Link>
-              <Link to="/login" className="btn cta-btn cta-btn-outline" style={{background: 'none', color: '#fff', fontWeight: 700, fontSize: '1.35rem', borderRadius: 10, padding: '1.1rem 2.7rem', border: '2.5px solid #fff', display: 'flex', alignItems: 'center', gap: '0.8rem'}}>
-                <i className="bi bi-arrow-right" style={{fontSize: '1.5rem'}}></i> {t('Log In')}
+              <Link to="/login" className="btn cta-btn cta-btn-outline" style={{background: 'none', color: '#fff', fontWeight: 700, fontSize: '0.98rem', borderRadius: 7, padding: '0.5rem 1.2rem', border: '1.5px solid #fff', display: 'flex', alignItems: 'center', gap: '0.4rem'}}>
+                <i className="bi bi-arrow-right" style={{fontSize: '1.1rem'}}></i> {t('Log In')}
               </Link>
-              <Link to="/login" className="btn cta-btn cta-btn-outline" style={{background: 'none', color: '#fff', fontWeight: 700, fontSize: '1.35rem', borderRadius: 10, padding: '1.1rem 2.7rem', border: '2.5px solid #fff', display: 'flex', alignItems: 'center', gap: '0.8rem'}}>
-                <i className="bi bi-journal-bookmark" style={{fontSize: '1.5rem'}}></i> {t('Explore Courses')}
+              <Link to="/login" className="btn cta-btn cta-btn-outline" style={{background: 'none', color: '#fff', fontWeight: 700, fontSize: '0.98rem', borderRadius: 7, padding: '0.5rem 1.2rem', border: '1.5px solid #fff', display: 'flex', alignItems: 'center', gap: '0.4rem'}}>
+                <i className="bi bi-journal-bookmark" style={{fontSize: '1.1rem'}}></i> {t('Explore Courses')}
               </Link>
             </div>
           </div>

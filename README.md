@@ -120,7 +120,7 @@ npm install
 PORT=3000
 NODE_ENV=development
 JWT_SECRET=your_jwt_secret
-COUCHDB_URL=http://localhost:5984
+COUCHDB_URL=http://192.168.1.66:5984
 COUCHDB_USERNAME=admin
 COUCHDB_PASSWORD=your_password
 ```
@@ -143,8 +143,8 @@ docker-compose up --build
 
 2. Access the application:
 - Frontend: http://localhost:5173
-- Backend API: http://localhost:3000
-- CouchDB: http://localhost:5984
+- Backend API: http://192.168.1.66:3000
+- CouchDB: http://192.168.1.66:5984
 
 ## Testing
 
