@@ -2,8 +2,6 @@ import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
-import PhoneInput from 'react-phone-input-2';
-import 'react-phone-input-2/lib/style.css';
 import { useAuth } from '../contexts/AuthContext';
 import { Modal, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';

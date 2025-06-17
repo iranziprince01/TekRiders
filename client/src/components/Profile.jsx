@@ -12,7 +12,6 @@ const Profile = () => {
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
     email: user?.email || '',
-    phone: user?.phone || '',
     address: user?.address || '',
     avatar: user?.avatar || ''
   });
@@ -83,7 +82,6 @@ const Profile = () => {
             <h2 className="mb-1">{form.firstName} {form.lastName}</h2>
             <p className="text-muted mb-2">{user?.role}</p>
             <p className="mb-3">{form.address}</p>
-            <p className="mb-3">{form.phone}</p>
             <p className="mb-3">{form.email}</p>
           </div>
         </div>
@@ -100,17 +98,13 @@ const Profile = () => {
               <input className="form-control" name="lastName" value={form.lastName} onChange={handleChange} required />
             </div>
             <div className="col-md-6">
-              <label className="form-label">{t('Phone')}</label>
-              <input className="form-control" name="phone" value={form.phone} onChange={handleChange} />
-              </div>
-                  <div className="col-md-6">
               <label className="form-label">{t('Address')}</label>
               <input className="form-control" name="address" value={form.address} onChange={handleChange} />
-                  </div>
-                  <div className="col-md-6">
+            </div>
+            <div className="col-md-6">
               <label className="form-label">{t('Email')}</label>
               <input className="form-control" name="email" value={form.email} onChange={handleChange} required />
-                  </div>
+            </div>
             <div className="col-12">
               <label className="form-label">{t('Profile Picture')}</label>
               <input className="form-control" type="file" accept="image/*" onChange={handleAvatarChange} />
@@ -119,12 +113,12 @@ const Profile = () => {
           <div className="mt-3">
             <button className="btn btn-primary me-2" type="submit" disabled={loading}>{loading ? t('Saving...') : t('Save')}</button>
             <button className="btn btn-secondary" type="button" onClick={() => setIsEditing(false)}>{t('Cancel')}</button>
-              </div>
+          </div>
           {error && <div className="alert alert-danger mt-3">{error}</div>}
           {success && <div className="alert alert-success mt-3">{success}</div>}
         </form>
-            )}
-      </div>
+      )}
+    </div>
   );
 };
 

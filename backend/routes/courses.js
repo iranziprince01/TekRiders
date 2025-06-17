@@ -267,4 +267,23 @@ router.put('/quiz/:quizId/grade', isAuth, isTutor, async (req, res) => {
   }
 });
 
+// Q&A endpoints (for future use)
+router.get('/:id/questions', async (req, res) => {
+  // TODO: Fetch all Q&A for a course from CouchDB
+  res.status(501).json({ message: 'Not implemented yet' });
+});
+router.post('/:id/questions', async (req, res) => {
+  // TODO: Add a new question to CouchDB
+  res.status(501).json({ message: 'Not implemented yet' });
+});
+// Notes endpoints (for future use)
+router.get('/:id/notes', async (req, res) => {
+  // TODO: Fetch all notes for the logged-in learner from CouchDB
+  res.status(501).json({ message: 'Not implemented yet' });
+});
+router.post('/:id/notes', async (req, res) => {
+  // TODO: Save/update a note for a lesson in CouchDB
+  res.status(501).json({ message: 'Not implemented yet' });
+});
+
 module.exports = router;

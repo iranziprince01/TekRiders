@@ -13,7 +13,6 @@ const UserProfile = () => {
     firstName: user?.firstName || '',
     middleName: user?.middleName || '',
     lastName: user?.lastName || '',
-    phone: user?.phone || '',
     profession: user?.profession || '',
     address: user?.address || '',
     email: user?.email || '',
@@ -169,7 +168,6 @@ const UserProfile = () => {
             <p className="text-muted mb-2">{user?.role}</p>
             <p className="mb-3">{form.profession}</p>
             <p className="mb-3">{form.address}</p>
-            <p className="mb-3">{form.phone}</p>
             <p className="mb-3">{form.email}</p>
           </div>
         </div>
@@ -209,10 +207,6 @@ const UserProfile = () => {
             <div className="col-md-4">
               <label className="form-label">{t('Last Name')}</label>
               <input className="form-control" name="lastName" value={form.lastName} onChange={handleChange} required />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label">{t('Phone Number')}</label>
-              <input className="form-control" name="phone" value={form.phone} onChange={handleChange} />
             </div>
             <div className="col-md-6">
               <label className="form-label">{t('Profession')}</label>

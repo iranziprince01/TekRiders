@@ -189,7 +189,7 @@ export default function TutorDashboard() {
           {filteredCourses.map(course => (
             <div key={course._id} className="col-md-6 col-lg-4">
               <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 2px 12px rgba(56, 189, 248, 0.10)', padding: '1.2rem 1.1rem 1.1rem 1.1rem', minHeight: 220, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: 'none' }}>
-                <Link to={`/course/${course._id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+                <Link to={`/tutor/course/${course._id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                       <h3 style={{ fontWeight: 700, fontSize: '1.18rem', margin: 0 }}>{course.title}</h3>

@@ -11,35 +11,21 @@ const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
 exports.register = async (req, res) => {
   console.log('Registration request received:', req.body);
-  
-  const { email, phone, password, role } = req.body;
-  if ((!email && !phone) || !password || !role) {
+  const { email, password, role } = req.body;
+  if (!email || !password || !role) {
     return res.status(400).json({ message: 'Email, password, and role are required.' });
   }
   if (!['learner', 'tutor'].includes(role)) {
     return res.status(400).json({ message: 'Role must be learner or tutor.' });
   }
-  
   try {
     // Check if email exists
-    if (email) {
-      const existingEmail = await User.findByEmail(email);
-      if (existingEmail) {
+    const existingEmail = await User.findByEmail(email);
+    if (existingEmail) {
       return res.status(409).json({ message: 'Email already exists.' });
     }
-    }
-    
-    // Check if phone exists
-    if (phone) {
-      const existingPhone = await User.findByPhone(phone);
-      if (existingPhone) {
-        return res.status(409).json({ message: 'Phone number already exists.' });
-      }
-    }
-    
-    const user = await User.create({ email, phone, password, role });
+    const user = await User.create({ email, password, role });
     console.log('User created successfully:', { ...user, password: '[REDACTED]' });
-    
     res.status(201).json({ message: 'User registered successfully.' });
   } catch (err) {
     console.error('Registration error:', err);
@@ -53,44 +39,30 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   console.log('Login request received:', { ...req.body, password: '[REDACTED]' });
-  
-  const { identifier, identifierType, password } = req.body;
-  if (!identifier || !identifierType || !password) {
-    return res.status(400).json({ message: 'Identifier (email/phone), identifier type, and password are required.' });
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and password are required.' });
   }
-  
   try {
-    let user;
-    if (identifierType === 'email') {
-      user = await User.findByEmail(identifier);
-    } else if (identifierType === 'phone') {
-      user = await User.findByPhone(identifier);
-    } else {
-      return res.status(400).json({ message: 'Invalid identifier type. Use "email" or "phone".' });
-    }
-
+    const user = await User.findByEmail(email);
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials.' });
     }
-    
     const isValid = await User.validatePassword(user, password);
     if (!isValid) {
       return res.status(401).json({ message: 'Invalid credentials.' });
     }
-    
     const token = jwt.sign(
-      { id: user._id, email: user.email, phone: user.phone, role: user.role }, 
+      { id: user._id, email: user.email, role: user.role }, 
       JWT_SECRET, 
       { expiresIn: '7d' }
     );
-    
-    console.log('Login successful for user:', identifier);
+    console.log('Login successful for user:', email);
     res.json({ 
       token, 
       user: { 
         _id: user._id,
         email: user.email, 
-        phone: user.phone,
         role: user.role 
       } 
     });
@@ -106,25 +78,15 @@ exports.login = async (req, res) => {
 
 exports.forgotPassword = async (req, res) => {
   console.log('Forgot password request received:', req.body);
-  const { identifier, identifierType } = req.body;
-  if (!identifier || !identifierType) {
-    return res.status(400).json({ message: 'Identifier (email/phone) and identifier type are required.' });
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ message: 'Email is required.' });
   }
-  
   try {
-    let user;
-    if (identifierType === 'email') {
-      user = await User.findByEmail(identifier);
-    } else if (identifierType === 'phone') {
-      user = await User.findByPhone(identifier);
-    } else {
-      return res.status(400).json({ message: 'Invalid identifier type. Use "email" or "phone".' });
-    }
-
+    const user = await User.findByEmail(email);
     if (!user) {
-      return res.status(404).json({ message: 'No user found with that identifier.' });
+      return res.status(404).json({ message: 'No user found with that email.' });
     }
-    
     // Generate a reset token and expiry (1 hour)
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetTokenExpiry = Date.now() + 3600000; // 1 hour
@@ -166,7 +128,7 @@ exports.forgotPassword = async (req, res) => {
 
     await transporter.sendMail(mailOptions);
     console.log('Password reset email sent to:', user.email);
-    res.json({ message: 'If this identifier exists, a password reset link will be sent.' });
+    res.json({ message: 'If this email exists, a password reset link will be sent.' });
   } catch (err) {
     console.error('Forgot password error:', err);
     res.status(500).json({ 

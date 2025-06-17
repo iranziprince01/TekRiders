@@ -2,9 +2,7 @@ import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
-import PhoneInput from 'react-phone-input-2';
 import { useAuth } from '../contexts/AuthContext';
-import 'react-phone-input-2/lib/style.css';
 import googleLogo from '../assets/google.webp';
 import { useNavigate } from 'react-router-dom';
 

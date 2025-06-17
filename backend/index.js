@@ -37,6 +37,9 @@ try {
   app.use('/api/users', userRoutes);
   app.use('/api/admin', adminRoutes);
 
+  // Serve uploads statically for video/image access
+  app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
+
   // Error handling middleware
   app.use((err, req, res, next) => {
     console.error(err.stack);

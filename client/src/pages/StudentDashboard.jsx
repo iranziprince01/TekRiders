@@ -31,6 +31,7 @@ const LearnerDashboard = () => {
   const [homeError, setHomeError] = useState('');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
+  const [tutors, setTutors] = useState({});
 
   const toggleSection = (section) => setExpanded(prev => ({ ...prev, [section]: !prev[section] }));
 
@@ -170,6 +171,25 @@ const LearnerDashboard = () => {
   const displayName = user?.firstName || user?.name || user?.email?.split('@')[0] || '';
   const avatarUrl = user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&size=200`;
 
+  // Fetch tutor info for each course
+  useEffect(() => {
+    const fetchTutors = async () => {
+      const tutorIds = Array.from(new Set(filteredCourses.map(c => c.author).filter(Boolean)));
+      const tutorData = {};
+      await Promise.all(tutorIds.map(async (id) => {
+        try {
+          const res = await axios.get(`/api/users/${id}`);
+          tutorData[id] = res.data;
+        } catch (e) {
+          tutorData[id] = null;
+        }
+      }));
+      setTutors(tutorData);
+    };
+    if (activeTab === 'home' && filteredCourses.length > 0) fetchTutors();
+    // eslint-disable-next-line
+  }, [activeTab, filteredCourses.length]);
+
   const renderContent = () => {
     switch (activeTab) {
       case 'profile':
@@ -268,7 +288,7 @@ const LearnerDashboard = () => {
                   <div key={course._id} className="col-md-4 col-lg-3">
                     <div className="card h-100 border-0 shadow-sm">
                       <img
-                        src={course.thumbnail ? `/uploads/${course.thumbnail}` : 'https://picsum.photos/300/200'}
+                        src={course.thumbnail ? `/api/uploads/${course.thumbnail}` : 'https://picsum.photos/300/200'}
                         className="card-img-top"
                         alt={course.title}
                         style={{ height: 160, objectFit: 'cover' }}
@@ -278,9 +298,9 @@ const LearnerDashboard = () => {
                         <p className="text-muted small mb-2">{course.category} &bull; {course.language?.toUpperCase()}</p>
                         <p className="small mb-2" style={{ minHeight: 48 }}>{course.description?.slice(0, 80)}{course.description?.length > 80 ? '...' : ''}</p>
                         <div className="d-flex align-items-center mt-2">
-                          <span className="me-2" style={{ fontSize: 13, color: '#888' }}>{t('By')} {course.authorEmail || course.author || 'Tutor'}</span>
+                          <span className="me-2" style={{ fontSize: 13, color: '#888' }}>{t('By')} {tutors[course.author]?.firstName || ''} {tutors[course.author]?.lastName || 'Tutor'}</span>
                         </div>
-                        <Link to={`/course/${course._id}`} className="btn btn-sm btn-primary mt-3 w-100">{t('View Course')}</Link>
+                        <Link to={`/course/${course._id}`} className="btn btn-primary btn-sm mt-2">Enroll Now</Link>
                       </div>
                     </div>
                   </div>

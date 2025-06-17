@@ -4,7 +4,6 @@ const bcrypt = require('bcryptjs');
 class User {
   constructor(data) {
     this.email = data.email;
-    this.phone = data.phone;
     this.password = data.password;
     this.role = data.role;
     this.type = 'user';
@@ -18,31 +17,13 @@ class User {
           email: email
         },
         use_index: ['email-index'],
-        fields: ['_id', '_rev', 'email', 'phone', 'password', 'role', 'resetToken', 'resetTokenExpiry']
+        fields: ['_id', '_rev', 'email', 'password', 'role', 'resetToken', 'resetTokenExpiry']
       };
       
       const result = await usersDb.find(query);
       return result.docs[0] || null;
     } catch (err) {
       console.error('Error finding user by email:', err);
-      throw err;
-    }
-  }
-
-  static async findByPhone(phone) {
-    try {
-      const query = {
-        selector: {
-          phone: phone
-        },
-        use_index: ['phone-index'],
-        fields: ['_id', '_rev', 'email', 'phone', 'password', 'role', 'resetToken', 'resetTokenExpiry']
-      };
-      
-      const result = await usersDb.find(query);
-      return result.docs[0] || null;
-    } catch (err) {
-      console.error('Error finding user by phone:', err);
       throw err;
     }
   }

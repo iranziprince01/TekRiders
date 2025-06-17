@@ -15,7 +15,6 @@ router.get('/profile', isAuth, async (req, res) => {
       createdAt: user.createdAt,
       firstName: user.firstName,
       lastName: user.lastName,
-      phone: user.phone,
       address: user.address
     });
   } catch (error) {
@@ -53,6 +52,17 @@ router.put('/:id/settings', isAuth, async (req, res) => {
     res.json({ ...user, _rev: result.rev });
   } catch (err) {
     res.status(500).json({ message: 'Error updating settings', error: err.message });
+  }
+});
+
+// Get user by ID (for course owner/tutor profile)
+router.get('/:id', async (req, res) => {
+  try {
+    const user = await db.users.get(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    res.status(404).json({ message: 'User not found' });
   }
 });
 

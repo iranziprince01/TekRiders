@@ -17,7 +17,6 @@ router.get('/users', isAdmin, async (req, res) => {
       lastActive: row.doc.lastActive || row.doc.createdAt,
       firstName: row.doc.firstName,
       lastName: row.doc.lastName,
-      phone: row.doc.phone,
       address: row.doc.address,
       avatar: row.doc.avatar
     })));
