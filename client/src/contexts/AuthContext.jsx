@@ -6,10 +6,26 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [offlineMode, setOfflineMode] = useState(false);
+  const [offlineError, setOfflineError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check for user data in localStorage on mount
+    // Offline session check
+    if (!navigator.onLine) {
+      const storedUser = localStorage.getItem('user');
+      const token = localStorage.getItem('token');
+      if (storedUser && token) {
+        setUser(JSON.parse(storedUser));
+        setOfflineMode(true);
+        setLoading(false);
+      } else {
+        setOfflineError('You must log in at least once while online to use offline features.');
+        setLoading(false);
+      }
+      return;
+    }
+    // Online: normal logic
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
     if (storedUser) {
@@ -34,6 +50,9 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
+    if (!navigator.onLine) {
+      return { success: false, message: 'You must be online to log in.' };
+    }
     try {
       const payload = { email, password };
       const res = await fetch('/api/auth/login', {
@@ -59,6 +78,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('user', JSON.stringify(userData));
         localStorage.setItem('token', token);
         setUser(userData);
+        setOfflineMode(false);
         
         // Redirect based on role
         if (userData.role === 'learner') {
@@ -81,6 +101,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     setUser(null);
+    setOfflineMode(false);
     navigate('/login');
   };
 
@@ -137,12 +158,14 @@ export const AuthProvider = ({ children }) => {
     logout,
     signup,
     setUser,
-    updateProfile
+    updateProfile,
+    offlineMode,
+    offlineError
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {!loading && (offlineError ? <div style={{color:'red',textAlign:'center',marginTop:'2rem'}}>{offlineError}</div> : children)}
     </AuthContext.Provider>
   );
 };

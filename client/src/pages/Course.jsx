@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { FiUser, FiCheckCircle, FiBookOpen, FiMessageCircle, FiEdit2, FiUsers, FiArrowLeft, FiRefreshCw } from 'react-icons/fi';
+import PouchDB from 'pouchdb-browser';
 
 const API_URL = import.meta.env.VITE_API_URL + '/api';
 
@@ -11,6 +12,8 @@ const MOCK_LEARNERS = [
   { name: 'Bob', avatar: '/default-avatar.png', progress: 60 },
   { name: 'Charlie', avatar: '/default-avatar.png', progress: 40 },
 ];
+
+const localCourses = new PouchDB('courses');
 
 export default function Course() {
   const { courseId } = useParams();
@@ -33,25 +36,45 @@ export default function Course() {
   useEffect(() => {
     const fetchCourse = async () => {
       setLoading(true);
+      setError('');
+      let loaded = false;
       try {
         const res = await axios.get(`${API_URL}/courses/${courseId}`);
-        // Only allow access if course is approved
         if (res.data.status !== 'approved') {
           setError('This course is not approved or not available.');
           setCourse(null);
         } else {
           setCourse(res.data);
-          // Fetch tutor info
+          loaded = true;
           const tutorRes = await axios.get(`${API_URL}/users/${res.data.author}`);
           setTutorInfo(tutorRes.data);
         }
       } catch (err) {
-        setError('Failed to load course.');
-      } finally {
-        setLoading(false);
+        // API failed, try PouchDB
       }
+      if (!loaded) {
+        try {
+          const doc = await localCourses.get(courseId);
+          setCourse(doc);
+          // Optionally fetch tutor info if available
+        } catch (err) {
+          setError('Failed to load course.');
+        }
+      }
+      setLoading(false);
     };
     fetchCourse();
+    // Fetch progress for this course
+    const fetchProgress = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get(`${API_URL}/courses/${courseId}/progress`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setCompletedLessons(res.data.completed || []);
+      } catch {}
+    };
+    fetchProgress();
   }, [courseId]);
 
   // Prepare lessons/videos
@@ -64,8 +87,15 @@ export default function Course() {
         duration: '',
       })) : []);
 
-  const handleMarkComplete = idx => {
-    setCompletedLessons(prev => prev.includes(idx) ? prev : [...prev, idx]);
+  const handleMarkComplete = async idx => {
+    if (completedLessons.includes(idx)) return;
+    setCompletedLessons(prev => [...prev, idx]);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API_URL}/courses/${courseId}/progress`, { lessonIndex: idx }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch {}
   };
 
   const handleAddQuestion = () => {
@@ -175,10 +205,22 @@ export default function Course() {
                 <h2 className="fw-bold mb-2">{course.title}</h2>
                 <div className="mb-2 text-muted">{course.category} &bull; {course.language?.toUpperCase()}</div>
                 <div className="mb-3" style={{ color: '#444' }}>{course.description}</div>
-                {/* Only show tutor full name and role */}
+                <div className="mb-2">
+                  <span className="badge bg-info me-2">Enrolled: {course.enrolled || 0}</span>
+                  <span className="badge bg-warning text-dark me-2">Rating: {course.rating || 0}</span>
+                  {course.price !== undefined && <span className="badge bg-success me-2">Price: {course.price === 0 ? 'Free' : `$${course.price}`}</span>}
+                  {course.status && <span className="badge bg-secondary">Status: {course.status}</span>}
+                </div>
+                {/* Only show tutor full name and role if available */}
                 <div className="mt-2">
-                  <span className="fw-semibold" style={{ fontSize: '1.12rem' }}>{tutorInfo?.firstName} {tutorInfo?.lastName}</span>
-                  <span className="badge bg-secondary ms-2" style={{ fontSize: '0.95rem' }}>{tutorInfo?.role?.toUpperCase()}</span>
+                  {tutorInfo ? (
+                    <>
+                      <span className="fw-semibold" style={{ fontSize: '1.12rem' }}>{tutorInfo.firstName} {tutorInfo.lastName}</span>
+                      <span className="badge bg-secondary ms-2" style={{ fontSize: '0.95rem' }}>{tutorInfo.role?.toUpperCase()}</span>
+                    </>
+                  ) : course.authorEmail ? (
+                    <span className="fw-semibold" style={{ fontSize: '1.12rem' }}>{course.authorEmail}</span>
+                  ) : null}
                 </div>
               </div>
             </div>

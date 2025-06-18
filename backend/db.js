@@ -6,7 +6,7 @@ require('dotenv').config();
 console.log('CouchDB URL:', process.env.COUCHDB_URL || 'http://192.168.1.66:5984');
 console.log('CouchDB User:', process.env.COUCHDB_USER);
 
-const couchUrl = process.env.COUCHDB_URL || 'http://192.168.1.66:5984';
+const couchUrl = process.env.COUCHDB_URL || 'http://localhost:5984';
 const couchUser = process.env.COUCHDB_USER;
 const couchPass = process.env.COUCHDB_PASS;
 

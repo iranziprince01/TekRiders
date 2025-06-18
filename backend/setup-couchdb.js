@@ -2,7 +2,7 @@ require('dotenv').config();
 const nano = require('nano');
 
 // Use a default CouchDB URL if not set
-const couchUrl = process.env.COUCHDB_URL || 'http://192.168.1.66:5984';
+const couchUrl = process.env.COUCHDB_URL || 'http://localhost:5984';
 const couchUser = process.env.COUCHDB_USER;
 const couchPass = process.env.COUCHDB_PASS;
 

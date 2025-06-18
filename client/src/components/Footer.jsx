@@ -15,10 +15,10 @@ const Footer = () => {
   };
 
   return (
-    <footer style={{background: '#fff', marginTop: 0, padding: 0, paddingTop: '5rem', position: 'relative'}}>
-      <div className="container">
+    <footer style={{background: '#fff', marginTop: 0, padding: 0, paddingTop: '7rem', paddingBottom: 0, position: 'relative'}}>
+      <div className="container" style={{paddingBottom: '5rem'}}>
         {/* Top Row: Logo and Socials */}
-        <div className="d-flex flex-column flex-md-row align-items-center justify-content-between py-3">
+        <div className="d-flex flex-column flex-md-row align-items-center justify-content-between py-3 mb-5">
           <span style={{fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '1.45rem', color: '#2997f7'}}>Tek Riders</span>
           <div className="d-flex gap-3 mt-3 mt-md-0">
             <a href="https://facebook.com" target="_blank" rel="noopener" aria-label="Facebook" style={{color: '#2997f7', fontSize: 20}}><i className="bi bi-facebook"></i></a>
@@ -28,7 +28,7 @@ const Footer = () => {
         </div>
         <hr className="my-2" />
         {/* Main Footer Grid */}
-        <div className="row g-4 mb-3">
+        <div className="row g-5 mb-5">
           <div className="col-12 col-md-3">
             <div className="fw-bold mb-2">Info</div>
             <Link to="/about" className="d-block text-secondary mb-2 text-decoration-none">About us</Link>
@@ -38,7 +38,7 @@ const Footer = () => {
           <div className="col-12 col-md-3">
             <div className="fw-bold mb-2">Contact Us</div>
             <a href="mailto:info.tekriders@gmail.com" className="d-block text-secondary mb-2 text-decoration-none">info.tekriders@gmail.com</a>
-            <a href="tel:+250785961427" className="d-block text-secondary mb-2 text-decoration-none">+250 785 961 427</a>
+            <a href="https://wa.me/250785961427" target="_blank" rel="noopener noreferrer" className="d-block text-secondary mb-2 text-decoration-none">+250 785 961 427</a>
             <a href="/live-chat" className="d-block text-secondary text-decoration-none">Live Chat</a>
           </div>
           <div className="col-12 col-md-3">
@@ -56,22 +56,8 @@ const Footer = () => {
           </div>
         </div>
       </div>
-      {/* Bottom Bar */}
-      <div className="bg-light w-100 text-center py-3 mt-3 text-secondary fw-normal" style={{fontSize: '0.98rem', position: 'relative'}}>
+      <div className="bg-light w-100 text-center py-3 mt-3 text-secondary fw-normal" style={{fontSize: '0.98rem', position: 'relative', paddingBottom: 0}}>
         ©2025 Tek Riders. All rights reserved.
-        {/* Back to Top Button */}
-        {showTop && (
-          <button
-            aria-label="Back to top"
-            onClick={scrollToTop}
-            className="btn btn-primary rounded-circle position-fixed"
-            style={{ right: 28, bottom: 32, zIndex: 1000, width: 48, height: 48, fontSize: 24 }}
-            onMouseOver={e => {e.currentTarget.style.background='#157be7'; e.currentTarget.style.transform='translateY(-3px) scale(1.08)';}}
-            onMouseOut={e => {e.currentTarget.style.background='#2997f7'; e.currentTarget.style.transform='none';}}
-          >
-            <i className="bi bi-arrow-up-short" style={{fontSize: 30, fontWeight: 900, lineHeight: 1}}></i>
-          </button>
-        )}
       </div>
     </footer>
   );

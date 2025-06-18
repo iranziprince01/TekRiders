@@ -8,9 +8,26 @@ import UNHCRLogo from '../assets/unhcr.png';
 import MineducLogo from '../assets/mieduc.png.avif';
 import AlightLogo from '../assets/Alight.png';
 import Footer from '../components/Footer';
+import { useEffect, useState } from 'react';
+import aminaImg from '../assets/amina.jpg';
+import gateteImg from '../assets/gatete.avif';
+import muhozaImg from '../assets/muhoza.avif';
 
 const Home = () => {
   const { t } = useTranslation();
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 300);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const handleBackToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const features = [
     {
@@ -110,13 +127,13 @@ const Home = () => {
       {/* Header handled globally */}
 
       {/* Hero Section - Modern Creative Enhanced */}
-      <section className="hero-modern" aria-labelledby="hero-title" style={{padding: '4rem 0 4rem 0', minHeight: '85vh'}}>
+      <section className="hero-modern" aria-labelledby="hero-title" style={{padding: '7rem 0 4rem 0', minHeight: '85vh'}}>
         <div className="hero-bg-shapes">
           <svg className="blob blob1" viewBox="0 0 320 320"><ellipse cx="160" cy="160" rx="160" ry="160" /></svg>
           <svg className="blob blob2" viewBox="0 0 220 220"><ellipse cx="110" cy="110" rx="110" ry="110" /></svg>
         </div>
         <div className="container hero-modern-container">
-          <div className="row align-items-center flex-wrap-reverse">
+          <div className="row align-items-center">
             <div className="col-12 col-lg-6 mb-4 mb-lg-0">
               <h1 id="hero-title" className="display-4 fw-bold mb-4" style={{color: '#399ff7', lineHeight: 1.08, fontFamily: 'Inter, sans-serif', letterSpacing: '-2px'}}>
                 {t('Learn Modern')}<br/>
@@ -128,13 +145,13 @@ const Home = () => {
                 <br/>
                 {t('Empower yourself with practical skills for the digital world.')}
               </p>
-              <div className="d-flex flex-wrap gap-3 mb-5">
+              <div className="d-flex flex-wrap gap-3 mb-5" style={{marginTop: '2rem'}}>
                 <Link to="/signup" className="btn btn-primary hero-cta fw-bold px-4 py-3">{t('Get Started')}</Link>
                 <Link to="/login" className="btn btn-outline-primary hero-cta fw-bold px-4 py-3">{t('Explore Courses')}</Link>
               </div>
             </div>
             <div className="col-12 col-lg-6 text-center">
-              <img src={HeroIllustration} alt={t('Inclusive e-learning illustration')} className="img-fluid" style={{maxWidth: 540, width: '100%', height: 'auto'}} />
+              <img src={HeroIllustration} alt={t('Inclusive e-learning illustration')} className="img-fluid" style={{maxWidth: 420, width: '100%', height: 'auto'}} />
             </div>
           </div>
         </div>
@@ -311,7 +328,7 @@ const Home = () => {
                 </div>
                 <hr style={{border: 'none', borderTop: '1.5px solid #f2eaea', margin: '0 0 18px 0'}} />
                 <div style={{display: 'flex', alignItems: 'center', gap: 16}}>
-                  <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=facearea&w=256&q=80&facepad=2" alt="Amina Iradukunda" style={{width: 54, height: 54, borderRadius: '50%', objectFit: 'cover', border: '3px solid #e6f6fc'}} />
+                  <img src={aminaImg} alt="Amina Iradukunda" style={{width: 54, height: 54, borderRadius: '50%', objectFit: 'cover', border: '3px solid #e6f6fc'}} />
                   <div>
                     <div style={{fontWeight: 700, fontSize: '1.08rem', color: '#222'}}>Amina Iradukunda</div>
                     <div style={{fontSize: '0.98rem', color: '#888'}}>Learner, Gatsibo</div>
@@ -331,7 +348,7 @@ const Home = () => {
                 </div>
                 <hr style={{border: 'none', borderTop: '1.5px solid #f2eaea', margin: '0 0 18px 0'}} />
                 <div style={{display: 'flex', alignItems: 'center', gap: 16}}>
-                  <img src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=facearea&w=256&q=80&facepad=2" alt="Jean Gatete" style={{width: 54, height: 54, borderRadius: '50%', objectFit: 'cover', border: '3px solid #e6f6fc'}} />
+                  <img src={gateteImg} alt="Jean Gatete" style={{width: 54, height: 54, borderRadius: '50%', objectFit: 'cover', border: '3px solid #e6f6fc'}} />
                   <div>
                     <div style={{fontWeight: 700, fontSize: '1.08rem', color: '#222'}}>Jean Gatete</div>
                     <div style={{fontSize: '0.98rem', color: '#888'}}>Learner, Rubavu</div>
@@ -351,7 +368,7 @@ const Home = () => {
                 </div>
                 <hr style={{border: 'none', borderTop: '1.5px solid #f2eaea', margin: '0 0 18px 0'}} />
                 <div style={{display: 'flex', alignItems: 'center', gap: 16}}>
-                  <img src="https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=facearea&w=256&q=80&facepad=2" alt="Ninnette muhoza" style={{width: 54, height: 54, borderRadius: '50%', objectFit: 'cover', border: '3px solid #e6f6fc'}} />
+                  <img src={muhozaImg} alt="Ninnette muhoza" style={{width: 54, height: 54, borderRadius: '50%', objectFit: 'cover', border: '3px solid #e6f6fc'}} />
                   <div>
                     <div style={{fontWeight: 700, fontSize: '1.08rem', color: '#222'}}>Ninnette muhoza</div>
                     <div style={{fontSize: '0.98rem', color: '#888'}}>Learner, Huye</div>
@@ -446,6 +463,34 @@ const Home = () => {
 
       {/* Footer */}
       <Footer />
+      {/* Back to Top Button */}
+      {showBackToTop && (
+        <button
+          onClick={handleBackToTop}
+          aria-label={t('Back to top')}
+          style={{
+            position: 'fixed',
+            bottom: 36,
+            right: 36,
+            zIndex: 9999,
+            background: '#399ff7',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '50%',
+            width: 56,
+            height: 56,
+            boxShadow: '0 4px 16px rgba(56, 159, 247, 0.18)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 28,
+            cursor: 'pointer',
+            transition: 'background 0.2s, box-shadow 0.2s',
+          }}
+        >
+          <span style={{fontWeight: 900, fontSize: 32, lineHeight: 1}}>&uarr;</span>
+        </button>
+      )}
     </div>
   );
 };

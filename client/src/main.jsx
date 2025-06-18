@@ -6,6 +6,8 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import AOS from 'aos';
+import { EnrolledLearnersPage } from './pages/InstructorCourse';
+import { Route } from 'react-router-dom';
 
 function Main() {
   useEffect(() => {
@@ -19,3 +21,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <Main />
   </React.StrictMode>,
 )
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js');
+  });
+}

@@ -15,7 +15,8 @@ router.get('/profile', isAuth, async (req, res) => {
       createdAt: user.createdAt,
       firstName: user.firstName,
       lastName: user.lastName,
-      address: user.address
+      address: user.address,
+      enrolledCourses: user.enrolledCourses || []
     });
   } catch (error) {
     console.error('Error fetching user profile:', error);

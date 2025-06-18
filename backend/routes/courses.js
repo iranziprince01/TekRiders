@@ -153,7 +153,7 @@ router.put('/:id', isAuth, isTutor, upload.fields([
     const updates = req.body;
     if (req.files.video) updates.video = req.files.video[0].filename;
     if (req.files.pdf) updates.pdf = req.files.pdf[0].filename;
-    if (req.files.image) updates.image = req.files.image[0].filename;
+    if (req.files.image) updates.thumbnail = req.files.image[0].filename;
     const updatedCourse = { ...course, ...updates, updatedAt: new Date().toISOString() };
     const result = await db.courses.insert(updatedCourse);
     res.json({ ...updatedCourse, _rev: result.rev });
@@ -284,6 +284,62 @@ router.get('/:id/notes', async (req, res) => {
 router.post('/:id/notes', async (req, res) => {
   // TODO: Save/update a note for a lesson in CouchDB
   res.status(501).json({ message: 'Not implemented yet' });
+});
+
+// Enroll a learner in a course
+router.post('/:id/enroll', isAuth, async (req, res) => {
+  try {
+    const course = await db.courses.get(req.params.id);
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+    if (!course.enrolled) course.enrolled = [];
+    // Prevent duplicate enrollment
+    if (course.enrolled.includes(req.user._id)) {
+      return res.status(400).json({ message: 'Already enrolled' });
+    }
+    course.enrolled.push(req.user._id);
+    await db.courses.insert(course);
+    // Optionally, add course to user's enrolledCourses
+    const user = await db.users.get(req.user._id);
+    if (!user.enrolledCourses) user.enrolledCourses = [];
+    if (!user.enrolledCourses.includes(course._id)) {
+      user.enrolledCourses.push(course._id);
+      await db.users.insert(user);
+    }
+    res.json({ message: 'Enrolled successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Error enrolling in course', error: err.message });
+  }
+});
+
+// Save lesson progress for a user
+router.post('/:id/progress', isAuth, async (req, res) => {
+  try {
+    const { lessonIndex } = req.body;
+    if (typeof lessonIndex !== 'number') {
+      return res.status(400).json({ message: 'lessonIndex is required and must be a number' });
+    }
+    const user = await db.users.get(req.user._id);
+    if (!user.courseProgress) user.courseProgress = {};
+    if (!user.courseProgress[req.params.id]) user.courseProgress[req.params.id] = [];
+    if (!user.courseProgress[req.params.id].includes(lessonIndex)) {
+      user.courseProgress[req.params.id].push(lessonIndex);
+      await db.users.insert(user);
+    }
+    res.json({ success: true, completed: user.courseProgress[req.params.id] });
+  } catch (err) {
+    res.status(500).json({ message: 'Error saving progress', error: err.message });
+  }
+});
+
+// Get lesson progress for a user
+router.get('/:id/progress', isAuth, async (req, res) => {
+  try {
+    const user = await db.users.get(req.user._id);
+    const completed = user.courseProgress && user.courseProgress[req.params.id] ? user.courseProgress[req.params.id] : [];
+    res.json({ completed });
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching progress', error: err.message });
+  }
 });
 
 module.exports = router;

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { FiUser, FiEdit2, FiBarChart2, FiUsers, FiArrowLeft, FiRefreshCw, FiActivity } from 'react-icons/fi';
+import PouchDB from 'pouchdb-browser';
 
 const API_URL = import.meta.env.VITE_API_URL + '/api';
 
@@ -28,6 +29,8 @@ const MOCK_ACTIVITY = [
   { type: 'completion', user: 'Bob', date: '2024-06-02' },
   { type: 'question', user: 'Charlie', date: '2024-06-03' },
 ];
+
+const localCourses = new PouchDB('courses');
 
 export default function InstructorCourse() {
   const { courseId } = useParams();
@@ -60,7 +63,14 @@ export default function InstructorCourse() {
         setOwner(userRes.data);
       }
     } catch (err) {
-      setError('Failed to load course. It may not exist or you may not have access.');
+      // Fallback: Try to fetch from local CouchDB (PouchDB)
+      try {
+        const doc = await localCourses.get(courseId);
+        setCourse(doc);
+        setError('');
+      } catch (e) {
+        setError('Failed to load course. It may not exist or you may not have access.');
+      }
     } finally {
       setLoading(false);
     }
@@ -100,7 +110,36 @@ export default function InstructorCourse() {
   };
 
   useEffect(() => {
-    fetchCourse();
+    const loadCourse = async () => {
+      setLoading(true);
+      setError('');
+      let loaded = false;
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get(`${API_URL}/courses/${courseId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setCourse(res.data);
+        loaded = true;
+        if (res.data.author) {
+          const userRes = await axios.get(`${API_URL.replace('/api','')}/api/users/${res.data.author}`);
+          setOwner(userRes.data);
+        }
+      } catch (err) {
+        // Ignore API error, try CouchDB
+      }
+      if (!loaded) {
+        try {
+          const doc = await localCourses.get(courseId);
+          setCourse(doc);
+          // Optionally fetch owner if author field exists
+        } catch (e) {
+          setCourse(null);
+        }
+      }
+      setLoading(false);
+    };
+    loadCourse();
     if (activeTab === 'enrolled') {
       fetchEnrolledStudents();
     }
@@ -110,27 +149,43 @@ export default function InstructorCourse() {
     // eslint-disable-next-line
   }, [courseId, activeTab]);
 
-  if (loading) return <div className="text-center py-5">Loading...</div>;
-  if (error) return (
-    <div className="d-flex flex-column align-items-center justify-content-center py-5">
-      <div className="alert alert-danger w-100 text-center mb-4" style={{maxWidth: 500}}>{error}</div>
-      <div className="d-flex gap-3">
-        <button className="btn btn-outline-primary" onClick={() => navigate(-1)}><FiArrowLeft className="me-2" />Go Back</button>
-        <button className="btn btn-primary" onClick={fetchCourse}><FiRefreshCw className="me-2" />Retry</button>
+  if (!course) {
+    if (error) {
+      console.error('Course load error:', error);
+      return (
+        <div className="container py-5 d-flex flex-column align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
+          <div className="alert alert-danger w-100 text-center mb-4" style={{maxWidth: 500}}>{error}</div>
+          <button className="btn btn-outline-primary" onClick={() => navigate('/tutor')}>&larr; Back to Dashboard</button>
+        </div>
+      );
+    }
+    return (
+      <div className="container py-5 d-flex flex-column align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
+        <div className="alert alert-info w-100 text-center mb-4" style={{maxWidth: 500}}>Loading course details...</div>
       </div>
-    </div>
-  );
-  if (!course) return null;
+    );
+  }
 
   // Prepare lessons/videos
-  const lessons = Array.isArray(course.content) && course.content.length > 0
-    ? course.content
-    : (Array.isArray(course.videos) ? course.videos.map((v, idx) => ({
-        title: v.originalname || `Lesson ${idx + 1}`,
-        videoUrl: `/api/uploads/${v.filename}`,
-        description: course.description,
-        duration: '',
-      })) : []);
+  let lessons = [];
+  if (Array.isArray(course?.content) && course.content.length > 0) {
+    if (Array.isArray(course?.videos) && course.videos.length > 0) {
+      lessons = course.content.map((lesson, idx) => ({
+        ...lesson,
+        videoUrl: course.videos[idx]?.filename ? `/api/uploads/${course.videos[idx].filename}` : undefined,
+        originalname: course.videos[idx]?.originalname,
+      }));
+    } else {
+      lessons = course.content;
+    }
+  } else if (Array.isArray(course?.videos)) {
+    lessons = course.videos.map((v, idx) => ({
+      title: v.originalname || `Lesson ${idx + 1}`,
+      videoUrl: `/api/uploads/${v.filename}`,
+      description: course.description,
+      duration: '',
+    }));
+  }
 
   return (
     <div className="container-fluid py-4" style={{ background: '#f6f8fa', minHeight: '80vh' }}>
@@ -149,18 +204,28 @@ export default function InstructorCourse() {
               {lessons.map((lesson, idx) => (
                 <li
                   key={idx}
-                  className={`list-group-item px-0 py-2 ${selectedLesson === idx ? 'fw-bold text-primary' : ''}`}
+                  className={`list-group-item d-flex align-items-center justify-content-between px-0 py-2 ${selectedLesson === idx ? 'fw-bold text-primary' : ''}`}
                   style={{ cursor: 'pointer', background: 'none', border: 'none' }}
                   onClick={() => setSelectedLesson(idx)}
                 >
-                  <span style={{ marginRight: 8 }}>🎬</span>{lesson.title || `Lesson ${idx + 1}`}
+                  <span>🎬 {lesson.title || `Lesson ${idx + 1}`}</span>
                 </li>
               ))}
             </ul>
+            <div className="mt-4">
+              <div className="progress" style={{ height: 8 }}>
+                <div
+                  className="progress-bar bg-success"
+                  role="progressbar"
+                  style={{ width: `${lessons.length ? (selectedLesson + 1) / lessons.length * 100 : 0}%` }}
+                />
+              </div>
+              <div className="small text-muted mt-1">Lesson: {selectedLesson + 1} / {lessons.length}</div>
+            </div>
           </div>
         </div>
         {/* Main Content */}
-        <div className="col-lg-9">
+        <div className="col-lg-6 mb-4 mb-lg-0">
           <div className="card border-0 shadow-lg p-4" style={{ borderRadius: 24, background: '#fff', minHeight: 420 }}>
             {/* Course Header */}
             <div className="d-flex flex-column flex-md-row align-items-md-center mb-4 gap-4">
@@ -169,18 +234,19 @@ export default function InstructorCourse() {
                 alt={course.title}
                 style={{ width: 180, height: 120, objectFit: 'cover', borderRadius: 16, border: '2px solid #e3e3e3' }}
               />
-              <div>
+              <div style={{ flex: 1 }}>
                 <h2 className="fw-bold mb-2">{course.title}</h2>
                 <div className="mb-2 text-muted">{course.category} &bull; {course.language?.toUpperCase()}</div>
                 <div className="mb-3" style={{ color: '#444' }}>{course.description}</div>
-                {course.price && course.price > 0 && (
-                  <div className="mb-3">
-                    <span className="badge bg-success fs-6">${course.price}</span>
-                  </div>
-                )}
-                <div className="d-flex align-items-center mt-2">
-                  <img src={owner?.avatar || '/default-avatar.png'} alt="Tutor Avatar" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e3e3e3' }} />
-                  <div className="ms-3">
+                <div className="mb-2">
+                  <span className="badge bg-info me-2">Enrolled: {Array.isArray(course.enrolled) ? course.enrolled.length : (course.enrolled || 0)}</span>
+                  <span className="badge bg-warning text-dark me-2">Rating: {course.rating || 0}</span>
+                  {course.price !== undefined && <span className="badge bg-success me-2">Price: {course.price === 0 ? 'Free' : `$${course.price}`}</span>}
+                  {course.status && <span className="badge bg-secondary">Status: {course.status}</span>}
+                </div>
+                <div className="mt-2 d-flex align-items-center">
+                  <img src={owner?.avatar || '/default-avatar.png'} alt="Tutor Avatar" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e3e3e3', marginRight: 12 }} />
+                  <div>
                     <div className="fw-semibold" style={{ fontSize: '1.08rem' }}>{owner?.firstName ? `${owner.firstName}${owner.lastName ? ' ' + owner.lastName : ''}` : owner?.name || 'Course Owner'}</div>
                     <div className="text-muted small">{owner?.email}</div>
                   </div>
@@ -204,36 +270,58 @@ export default function InstructorCourse() {
                 </div>
               </div>
             )}
-            {/* Course Stats */}
-            <div className="row mt-4 g-3">
-              <div className="col-md-3">
-                <div className="bg-light rounded-3 p-3 text-center">
-                  <div className="fw-bold" style={{ fontSize: 22 }}>{course.enrolled ?? 0}</div>
-                  <div className="small text-muted">Enrollments</div>
-                </div>
-              </div>
-              <div className="col-md-3">
-                <div className="bg-light rounded-3 p-3 text-center">
-                  <div className="fw-bold" style={{ fontSize: 22 }}>{course.completions ?? 0}</div>
-                  <div className="small text-muted">Completions</div>
-                </div>
-              </div>
-              <div className="col-md-3">
-                <div className="bg-light rounded-3 p-3 text-center">
-                  <div className="fw-bold" style={{ fontSize: 22 }}>{course.rating ?? 0}</div>
-                  <div className="small text-muted">Avg. Rating</div>
-                </div>
-              </div>
-              <div className="col-md-3">
-                <div className="bg-light rounded-3 p-3 text-center">
-                  <div className="fw-bold" style={{ fontSize: 22 }}>${course.revenue ?? 0}</div>
-                  <div className="small text-muted">Revenue</div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
+        {/* Optionally, add analytics or enrolled students in a third column if needed */}
       </div>
+    </div>
+  );
+}
+
+export function EnrolledLearnersPage() {
+  const { courseId } = useParams();
+  const [learners, setLearners] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchLearners = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get(`/api/courses/${courseId}/enrolled`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setLearners(res.data);
+      } catch (err) {
+        setError('Failed to fetch enrolled learners.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLearners();
+  }, [courseId]);
+
+  return (
+    <div className="container py-4">
+      <h2>Enrolled Learners</h2>
+      <Link to="/tutor" className="btn btn-link mb-3">&larr; Back to Dashboard</Link>
+      {loading ? (
+        <div>Loading...</div>
+      ) : error ? (
+        <div className="alert alert-danger">{error}</div>
+      ) : learners.length === 0 ? (
+        <div className="alert alert-info">No learners enrolled yet.</div>
+      ) : (
+        <ul className="list-group">
+          {learners.map(learner => (
+            <li key={learner._id} className="list-group-item">
+              <strong>{learner.firstName || learner.name || learner.email}</strong> ({learner.email})
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 } 

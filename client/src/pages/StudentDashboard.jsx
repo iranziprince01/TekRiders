@@ -10,10 +10,11 @@ import Profile from '../components/Profile';
 import { useAuth } from '../contexts/AuthContext';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import axios from 'axios';
+import { getLocalCourses } from '../services/db';
 
 const LearnerDashboard = () => {
   const { t } = useTranslation();
-  const { user, logout } = useAuth();
+  const { user, logout, offlineMode } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [notifications, setNotifications] = useState([]);
@@ -32,6 +33,12 @@ const LearnerDashboard = () => {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [tutors, setTutors] = useState({});
+  const [enrolledCourses, setEnrolledCourses] = useState([]);
+  const [enrolling, setEnrolling] = useState({}); // { [courseId]: boolean }
+  const [enrollSuccess, setEnrollSuccess] = useState({}); // { [courseId]: boolean }
+  const [enrollError, setEnrollError] = useState({}); // { [courseId]: string }
+  const [courseProgress, setCourseProgress] = useState({}); // { [courseId]: [completedLessonIndices] }
+  const [siteStatus, setSiteStatus] = useState(navigator.onLine ? 'Online' : 'Offline');
 
   const toggleSection = (section) => setExpanded(prev => ({ ...prev, [section]: !prev[section] }));
 
@@ -87,11 +94,32 @@ const LearnerDashboard = () => {
     ]);
   }, []);
 
+  // Listen for online/offline events
+  useEffect(() => {
+    const updateStatus = () => setSiteStatus(navigator.onLine ? 'Online' : 'Offline');
+    window.addEventListener('online', updateStatus);
+    window.addEventListener('offline', updateStatus);
+    return () => {
+      window.removeEventListener('online', updateStatus);
+      window.removeEventListener('offline', updateStatus);
+    };
+  }, []);
+
   // Fetch approved courses for Home tab
   useEffect(() => {
-    if (activeTab === 'home') {
       setHomeLoading(true);
       setHomeError('');
+    if (offlineMode) {
+      getLocalCourses()
+        .then(courses => {
+          setApprovedCourses(courses.filter(c => c.status === 'approved'));
+          setHomeLoading(false);
+        })
+        .catch(() => {
+          setHomeError('No offline courses found. Please connect to the internet to sync courses.');
+          setHomeLoading(false);
+        });
+    } else {
       axios.get('/api/courses/approved')
         .then(res => {
           setApprovedCourses(res.data);
@@ -102,7 +130,7 @@ const LearnerDashboard = () => {
           setHomeLoading(false);
         });
     }
-  }, [activeTab]);
+  }, [activeTab, offlineMode]);
 
   // Unique categories for filter
   const categories = Array.from(new Set(approvedCourses.map(c => c.category).filter(Boolean)));
@@ -190,6 +218,83 @@ const LearnerDashboard = () => {
     // eslint-disable-next-line
   }, [activeTab, filteredCourses.length]);
 
+  // Fetch enrolled courses for the learner
+  useEffect(() => {
+    const fetchEnrolledCourses = async () => {
+      if (!user || !user._id) return;
+      if (offlineMode) {
+        // Offline: get all local courses and filter by enrolledCourses
+        const localCourses = await getLocalCourses();
+        const profile = JSON.parse(localStorage.getItem('user'));
+        const enrolledIds = profile?.enrolledCourses || [];
+        setEnrolledCourses(localCourses.filter(c => enrolledIds.includes(c._id)));
+        return;
+      }
+      try {
+        const token = localStorage.getItem('token');
+        const profileRes = await axios.get('/api/users/profile', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const enrolledIds = profileRes.data.enrolledCourses || [];
+        if (enrolledIds.length === 0) {
+          setEnrolledCourses([]);
+          return;
+        }
+        // Fetch course details for each enrolled course
+        const courseDetails = await Promise.all(
+          enrolledIds.map(async (id) => {
+            try {
+              const res = await axios.get(`/api/courses/${id}`);
+              return res.data;
+            } catch {
+              return null;
+            }
+          })
+        );
+        setEnrolledCourses(courseDetails.filter(Boolean));
+      } catch (err) {
+        setEnrolledCourses([]);
+      }
+    };
+    fetchEnrolledCourses();
+  }, [user, offlineMode]);
+
+  // Fetch progress for all enrolled courses
+  useEffect(() => {
+    const fetchAllProgress = async () => {
+      if (!enrolledCourses.length) return;
+      if (offlineMode) {
+        // Offline: get progress from localStorage or PouchDB (if implemented)
+        const progressData = {};
+        enrolledCourses.forEach(course => {
+          const docId = `progress_${course._id}`;
+          try {
+            const doc = JSON.parse(localStorage.getItem(docId));
+            progressData[course._id] = doc?.progress || [];
+          } catch {
+            progressData[course._id] = [];
+          }
+        });
+        setCourseProgress(progressData);
+        return;
+      }
+      const token = localStorage.getItem('token');
+      const progressData = {};
+      await Promise.all(enrolledCourses.map(async (course) => {
+        try {
+          const res = await axios.get(`/api/courses/${course._id}/progress`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          progressData[course._id] = res.data.completed || [];
+        } catch {
+          progressData[course._id] = [];
+        }
+      }));
+      setCourseProgress(progressData);
+    };
+    fetchAllProgress();
+  }, [enrolledCourses, offlineMode]);
+
   const renderContent = () => {
     switch (activeTab) {
       case 'profile':
@@ -198,40 +303,79 @@ const LearnerDashboard = () => {
         return (
           <div className="card border-0 shadow-sm">
             <div className="card-header bg-white py-3">
-              <h5 className="mb-0">{t('My Courses')}</h5>
+              <h5 className="mb-0">{t('Enrolled Courses')}</h5>
             </div>
             <div className="card-body">
+              {enrolledCourses.length === 0 ? (
+                <div className="alert alert-info">{t('No enrolled courses')}</div>
+              ) : (
               <div className="row g-4">
-                {courses.map(course => (
-                  <div key={course.id} className="col-md-4">
-                    <div className="card h-100 border-0 shadow-sm">
-                      <img 
-                        src={course.thumbnail} 
+                  {enrolledCourses.map(course => (
+                    <div key={course._id} className="col-md-4">
+                      <Link to={`/course/${course._id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                        <div className="card h-100 border-0 shadow-sm" style={{ cursor: 'pointer' }}>
+                          <img 
+                            src={course.thumbnail ? `/api/uploads/${course.thumbnail}` : 'https://picsum.photos/300/200'} 
                         className="card-img-top" 
                         alt={course.title}
                         style={{ height: 160, objectFit: 'cover' }}
                       />
                       <div className="card-body">
                         <h6 className="card-title">{course.title}</h6>
-                        <p className="text-muted small mb-2">{course.tutor}</p>
-                        <div className="progress mb-2" style={{ height: 6 }}>
-                          <div 
-                            className="progress-bar" 
-                            role="progressbar" 
-                            style={{ width: `${course.progress}%` }}
-                          />
+                            <p className="text-muted small mb-2">{course.category} &bull; {course.language?.toUpperCase()}</p>
+                            <p className="small mb-2" style={{ minHeight: 48 }}>{course.description?.slice(0, 80)}{course.description?.length > 80 ? '...' : ''}</p>
+                            <div className="d-flex align-items-center mt-2">
+                              <span className="me-2" style={{ fontSize: 13, color: '#888' }}>{t('By')} {tutors[course.author]?.firstName || ''} {tutors[course.author]?.lastName || 'Tutor'}</span>
+                            </div>
+                            <div className="d-flex justify-content-start mt-2">
+                              <button
+                                className="btn btn-primary btn-sm px-3 py-1"
+                                style={{ fontSize: '0.97rem', borderRadius: '6px', minWidth: 90 }}
+                                disabled={enrolling[course._id] || (enrolledCourses.some(ec => ec._id === course._id))}
+                                onClick={async (e) => {
+                                  e.preventDefault();
+                                  if (enrolling[course._id] || (enrolledCourses.some(ec => ec._id === course._id))) return;
+                                  setEnrolling(prev => ({ ...prev, [course._id]: true }));
+                                  setEnrollError(prev => ({ ...prev, [course._id]: '' }));
+                                  try {
+                                    const token = localStorage.getItem('token');
+                                    await axios.post(`/api/courses/${course._id}/enroll`, {}, {
+                                      headers: { Authorization: `Bearer ${token}` }
+                                    });
+                                    setEnrollSuccess(prev => ({ ...prev, [course._id]: true }));
+                                    // Refetch enrolled courses
+                                    const profileRes = await axios.get('/api/users/profile', {
+                                      headers: { Authorization: `Bearer ${token}` }
+                                    });
+                                    const enrolledIds = profileRes.data.enrolledCourses || [];
+                                    const courseDetails = await Promise.all(
+                                      enrolledIds.map(async (id) => {
+                                        try {
+                                          const res = await axios.get(`/api/courses/${id}`);
+                                          return res.data;
+                                        } catch {
+                                          return null;
+                                        }
+                                      })
+                                    );
+                                    setEnrolledCourses(courseDetails.filter(Boolean));
+                                  } catch (err) {
+                                    setEnrollError(prev => ({ ...prev, [course._id]: err?.response?.data?.message || 'Failed to enroll' }));
+                                  } finally {
+                                    setEnrolling(prev => ({ ...prev, [course._id]: false }));
+                                  }
+                                }}
+                              >
+                                {enrolledCourses.some(ec => ec._id === course._id) ? t('Enrolled') : t('Enroll Now')}
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                        <div className="d-flex justify-content-between align-items-center">
-                          <small className="text-muted">{course.progress}% {t('complete')}</small>
-                          <Link to={`/course/${course.id}`} className="btn btn-sm btn-primary">
-                            {t('Continue')}
                           </Link>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 ))}
               </div>
+              )}
             </div>
           </div>
         );
@@ -285,7 +429,98 @@ const LearnerDashboard = () => {
             ) : (
               <div className="row g-4">
                 {filteredCourses.map(course => (
-                  <div key={course._id} className="col-md-4 col-lg-3">
+                  <div key={course._id || course.id} className="col-12 col-sm-6 col-lg-4 d-flex">
+                    {course._id ? (
+                      <Link to={`/course/${course._id}`} className="text-decoration-none text-dark flex-fill">
+                        {console.log('Rendering course card with _id:', course._id)}
+                        <div className="card dashboard-course-card border-0 shadow-sm h-100 d-flex flex-column">
+                          <img
+                            src={course.thumbnail ? `/api/uploads/${course.thumbnail}` : 'https://picsum.photos/300/200'}
+                            className="card-img-top rounded-top"
+                            alt={course.title}
+                            style={{ height: 160, objectFit: 'cover' }}
+                          />
+                          <div className="card-body pb-2">
+                            <h5 className="card-title fw-bold mb-2 text-truncate" title={course.title}>{course.title}</h5>
+                            <p className="text-muted small mb-2 text-truncate" title={course.description}>{course.description}</p>
+                            <div className="d-flex flex-wrap gap-2 mb-2">
+                              <span className="badge bg-light text-primary fw-semibold">{course.category}</span>
+                              <span className="badge bg-info text-dark fw-semibold">{course.language?.toUpperCase()}</span>
+                            </div>
+                            <div className="d-flex justify-content-start mt-2">
+                              <button
+                                className="btn btn-primary btn-sm px-3 py-1"
+                                style={{ fontSize: '0.97rem', borderRadius: '6px', minWidth: 90 }}
+                                disabled={enrolling[course._id] || (enrolledCourses.some(ec => ec._id === course._id))}
+                                onClick={async (e) => {
+                                  e.preventDefault();
+                                  if (enrolling[course._id] || (enrolledCourses.some(ec => ec._id === course._id))) return;
+                                  setEnrolling(prev => ({ ...prev, [course._id]: true }));
+                                  setEnrollError(prev => ({ ...prev, [course._id]: '' }));
+                                  try {
+                                    const token = localStorage.getItem('token');
+                                    await axios.post(`/api/courses/${course._id}/enroll`, {}, {
+                                      headers: { Authorization: `Bearer ${token}` }
+                                    });
+                                    setEnrollSuccess(prev => ({ ...prev, [course._id]: true }));
+                                    // Refetch enrolled courses
+                                    const profileRes = await axios.get('/api/users/profile', {
+                                      headers: { Authorization: `Bearer ${token}` }
+                                    });
+                                    const enrolledIds = profileRes.data.enrolledCourses || [];
+                                    const courseDetails = await Promise.all(
+                                      enrolledIds.map(async (id) => {
+                                        try {
+                                          const res = await axios.get(`/api/courses/${id}`);
+                                          return res.data;
+                                        } catch {
+                                          return null;
+                                        }
+                                      })
+                                    );
+                                    setEnrolledCourses(courseDetails.filter(Boolean));
+                                  } catch (err) {
+                                    setEnrollError(prev => ({ ...prev, [course._id]: err?.response?.data?.message || 'Failed to enroll' }));
+                                  } finally {
+                                    setEnrolling(prev => ({ ...prev, [course._id]: false }));
+                                  }
+                                }}
+                              >
+                                {enrolledCourses.some(ec => ec._id === course._id) ? t('Enrolled') : t('Enroll Now')}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    ) : (
+                      <div className="card dashboard-course-card border-0 shadow-sm h-100 d-flex flex-column bg-warning-subtle align-items-center justify-content-center">
+                        <span className="badge bg-danger">Invalid course data</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      case 'progress':
+        return (
+          <div className="card border-0 shadow-sm">
+            <div className="card-header bg-white py-3">
+              <h5 className="mb-0">{t('Progress')}</h5>
+            </div>
+            <div className="card-body">
+              {enrolledCourses.length === 0 ? (
+                <div className="alert alert-info">{t('No enrolled courses')}</div>
+              ) : (
+                <div className="row g-4">
+                  {enrolledCourses.map(course => {
+                    const completed = courseProgress[course._id] || [];
+                    const lessons = Array.isArray(course.content) && course.content.length > 0
+                      ? course.content
+                      : (Array.isArray(course.videos) ? course.videos : []);
+                    return (
+                      <div key={course._id} className="col-md-6 col-lg-4">
                     <div className="card h-100 border-0 shadow-sm">
                       <img
                         src={course.thumbnail ? `/api/uploads/${course.thumbnail}` : 'https://picsum.photos/300/200'}
@@ -296,17 +531,25 @@ const LearnerDashboard = () => {
                       <div className="card-body">
                         <h6 className="card-title fw-bold">{course.title}</h6>
                         <p className="text-muted small mb-2">{course.category} &bull; {course.language?.toUpperCase()}</p>
-                        <p className="small mb-2" style={{ minHeight: 48 }}>{course.description?.slice(0, 80)}{course.description?.length > 80 ? '...' : ''}</p>
-                        <div className="d-flex align-items-center mt-2">
-                          <span className="me-2" style={{ fontSize: 13, color: '#888' }}>{t('By')} {tutors[course.author]?.firstName || ''} {tutors[course.author]?.lastName || 'Tutor'}</span>
+                            <div className="progress mb-2" style={{ height: 8 }}>
+                              <div
+                                className="progress-bar bg-success"
+                                role="progressbar"
+                                style={{ width: `${lessons.length ? (completed.length / lessons.length) * 100 : 0}%` }}
+                              />
+                            </div>
+                            <div className="d-flex justify-content-between align-items-center mb-2">
+                              <small className="text-muted">{t('Progress')}: {completed.length} / {lessons.length}</small>
+                              <Link to={`/course/${course._id}`} className="btn btn-sm btn-primary">{t('Continue')}</Link>
+                            </div>
+                          </div>
                         </div>
-                        <Link to={`/course/${course._id}`} className="btn btn-primary btn-sm mt-2">Enroll Now</Link>
                       </div>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })}
               </div>
             )}
+            </div>
           </div>
         );
       default:
@@ -355,35 +598,30 @@ const LearnerDashboard = () => {
               </div>
               <div className="card-body">
                 <div className="row g-4">
-                  {courses.map(course => (
-                    <div key={course.id} className="col-md-4">
+                  {approvedCourses.length === 0 ? (
+                    <div className="alert alert-info">{t('No courses found.')}</div>
+                  ) : (
+                    approvedCourses.map(course => (
+                      <div key={course._id} className="col-md-4">
                       <div className="card h-100 border-0 shadow-sm">
                         <img 
-                          src={course.thumbnail} 
+                            src={course.thumbnail ? `/api/uploads/${course.thumbnail}` : 'https://picsum.photos/300/200'}
                           className="card-img-top" 
                           alt={course.title}
                           style={{ height: 160, objectFit: 'cover' }}
                         />
                         <div className="card-body">
                           <h6 className="card-title">{course.title}</h6>
-                          <p className="text-muted small mb-2">{course.tutor}</p>
-                          <div className="progress mb-2" style={{ height: 6 }}>
-                            <div 
-                              className="progress-bar" 
-                              role="progressbar" 
-                              style={{ width: `${course.progress}%` }}
-                            />
+                            <p className="text-muted small mb-2">{course.category} &bull; {course.language?.toUpperCase()}</p>
+                            <div className="d-flex align-items-center mt-2">
+                              <span className="me-2" style={{ fontSize: 13, color: '#888' }}>{t('By')} {tutors[course.author]?.firstName || ''} {tutors[course.author]?.lastName || 'Tutor'}</span>
                           </div>
-                          <div className="d-flex justify-content-between align-items-center">
-                            <small className="text-muted">{course.progress}% {t('complete')}</small>
-                            <Link to={`/course/${course.id}`} className="btn btn-sm btn-primary">
-                              {t('Continue')}
-                            </Link>
+                            <Link to={`/course/${course._id}`} className="btn btn-primary btn-sm mt-2">{t('Continue')}</Link>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
             </div>
@@ -468,6 +706,7 @@ const LearnerDashboard = () => {
               </div>
             </div>
             <div className="d-flex align-items-center">
+              <span className={`badge rounded-pill ${siteStatus === 'Online' ? 'bg-success' : 'bg-danger'}`} style={{ fontSize: '1rem', marginRight: 16 }}>{siteStatus}</span>
               <div className="position-relative me-3">
                 <FiBell size={24} className="text-muted" />
                 {notifications.length > 0 && (

@@ -601,15 +601,6 @@ body {
   .hero-modern-container {
     position: relative;
     z-index: 1;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 2.5rem;
-    @media (max-width: 991.98px) {
-      flex-direction: column-reverse;
-      text-align: center;
-      gap: 2rem;
-    }
   }
 
   .hero-modern-content {
@@ -798,5 +789,78 @@ body {
 @media (max-width: 768px) {
   .container {
     padding: 0 0.5rem;
+  }
+}
+
+.dashboard-course-card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.10);
+  transition: box-shadow 0.2s, transform 0.2s;
+  padding: 0;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  &:hover {
+    box-shadow: 0 8px 24px rgba(56, 189, 248, 0.13);
+    transform: translateY(-4px) scale(1.03);
+  }
+  .card-img-top {
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    object-fit: cover;
+    width: 100%;
+    height: 160px;
+  }
+  .card-body {
+    padding: 1.5rem 1.4rem 2rem 1.4rem;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+  .card-title {
+    font-size: 1.08rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .badge {
+    font-size: 0.93rem;
+    padding: 0.32rem 0.7rem;
+    border-radius: 8px;
+    font-weight: 500;
+  }
+  .card-footer {
+    background: #fff;
+    border-top: none;
+    padding: 1rem 1.4rem 2rem 1.4rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-start;
+  }
+}
+@media (max-width: 767.98px) {
+  .dashboard-course-card {
+    min-height: 260px;
+    .card-img-top {
+      height: 120px;
+    }
+    .card-body {
+      padding: 1rem 0.9rem 2rem 0.9rem;
+    }
+    .card-footer {
+      padding: 0.7rem 0.9rem 2rem 0.9rem;
+    }
   }
 } 

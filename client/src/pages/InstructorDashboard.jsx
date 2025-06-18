@@ -187,61 +187,56 @@ export default function TutorDashboard() {
         ) : (
         <div className="row g-4">
           {filteredCourses.map(course => (
-            <div key={course._id} className="col-md-6 col-lg-4">
-              <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 2px 12px rgba(56, 189, 248, 0.10)', padding: '1.2rem 1.1rem 1.1rem 1.1rem', minHeight: 220, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: 'none' }}>
-                <Link to={`/tutor/course/${course._id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <h3 style={{ fontWeight: 700, fontSize: '1.18rem', margin: 0 }}>{course.title}</h3>
-                      <span
-                        style={{
-                          background:
-                            course.status === 'draft'
-                              ? '#fff6e0'
-                              : course.status === 'approved'
-                              ? '#e6f6ec'
-                              : course.status === 'rejected'
-                              ? '#ffeaea'
-                              : '#e6f6ec',
-                          color:
-                            course.status === 'draft'
-                              ? '#f7a32b'
-                              : course.status === 'approved'
-                              ? '#2eaf6c'
-                              : course.status === 'rejected'
-                              ? '#f44336'
-                              : '#2eaf6c',
-                          fontWeight: 600,
-                          borderRadius: 16,
-                          padding: '0.18rem 0.9rem',
-                          fontSize: '0.95rem',
-                        }}
-                      >
-                        {course.status === 'draft'
-                          ? t('Pending')
-                          : course.status === 'approved'
-                          ? t('Approved')
-                          : course.status === 'rejected'
-                          ? t('Rejected')
-                          : t(course.status.charAt(0).toUpperCase() + course.status.slice(1))}
-                      </span>
+            <div key={course._id || course.id} className="col-12 col-sm-6 col-lg-4 d-flex">
+              {course._id ? (
+                <div className="card dashboard-course-card flex-fill border-0 shadow-sm h-100 d-flex flex-column justify-content-between">
+                  {console.log('Rendering tutor course card with _id:', course._id)}
+                  <Link to={`/tutor/course/${course._id}`} className="text-decoration-none text-dark">
+                    <div style={{ position: 'relative' }}>
+                      <img
+                        src={course.thumbnail ? `/api/uploads/${course.thumbnail}` : 'https://picsum.photos/300/200'}
+                        className="card-img-top rounded-top"
+                        alt={course.title}
+                        style={{ height: 160, objectFit: 'cover', borderTopLeftRadius: 16, borderTopRightRadius: 16 }}
+                      />
+                      <span style={{
+                        position: 'absolute',
+                        top: 12,
+                        left: 12,
+                        zIndex: 2,
+                        background: course.status === 'approved' ? '#1ec773' : (course.status === 'pending' ? '#ffc107' : '#6c757d'),
+                        color: '#fff',
+                        fontWeight: 700,
+                        fontSize: 14,
+                        borderRadius: 8,
+                        padding: '0.32rem 1.1rem',
+                        boxShadow: '0 4px 16px rgba(56,159,247,0.18), 0 1.5px 8px rgba(0,0,0,0.10)',
+                        letterSpacing: '0.01em',
+                      }}>{t(course.status.charAt(0).toUpperCase() + course.status.slice(1))}</span>
                     </div>
-                    <p style={{ color: '#888', fontSize: '0.98rem', marginBottom: 16 }}>{course.description}</p>
-                    <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-                      <span style={{ background: '#e0e7ff', color: '#3b4cca', fontWeight: 600, borderRadius: 8, padding: '0.32rem 0.8rem', fontSize: '0.98rem' }}>{course.category || t('No Category')}</span>
-                      <span style={{ background: '#e6f6fc', color: '#2b9ef7', fontWeight: 600, borderRadius: 8, padding: '0.32rem 0.8rem', fontSize: '0.98rem' }}>Enrolled: <span style={{ color: '#2997f7' }}>{course.enrolled ?? 0}</span></span>
-                      <span style={{ background: '#fff6e0', color: '#f7a32b', fontWeight: 600, borderRadius: 8, padding: '0.32rem 0.8rem', fontSize: '0.98rem' }}>Rating: <span style={{ color: '#f7a32b' }}>{course.rating ?? 'N/A'}</span></span>
+                    <div className="card-body pb-2">
+                      <h5 className="card-title fw-bold mb-2 text-truncate" title={course.title}>{course.title}</h5>
+                      <p className="text-muted small mb-2 text-truncate" title={course.description}>{course.description}</p>
+                      <div className="d-flex flex-wrap gap-2 mb-3">
+                        <span className="badge bg-light text-primary fw-semibold">{course.category || t('No Category')}</span>
+                        <span className="badge bg-info text-dark fw-semibold">Enrolled: {Array.isArray(course.enrolled) ? course.enrolled.length : (course.enrolled || 0)}</span>
+                        <span className="badge bg-warning text-dark fw-semibold">Rating: {course.rating ?? 'N/A'}</span>
+                      </div>
                     </div>
+                  </Link>
+                  <div className="card-footer bg-white border-0 d-flex flex-wrap gap-2 justify-content-between pt-0 pb-3 px-3" style={{ borderBottomLeftRadius: 16, borderBottomRightRadius: 16 }}>
+                    <button className="btn btn-outline-primary btn-sm d-flex align-items-center gap-1 flex-fill" onClick={() => handleEdit(course)}><FiEdit2 />{t('Update')}</button>
+                    <button className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 flex-fill" onClick={() => handleAnalytics(course._id)}><FiBarChart2 />{t('Analytics')}</button>
+                    <button className="btn btn-outline-danger btn-sm d-flex align-items-center gap-1 flex-fill" onClick={() => handleDelete(course._id)}><FiTrash2 />{t('Delete')}</button>
+                    <button className="btn btn-outline-info btn-sm d-flex align-items-center gap-1 flex-fill" onClick={() => window.location.href = `/tutor/course/${course._id}/enrolled`}><FiUser />{t('View Enrolled Students')}</button>
+                    <button className="btn btn-outline-dark btn-sm d-flex align-items-center gap-1 flex-fill" onClick={() => handleViewQuizzes(course._id)}><FiBook />{t('View Quiz Submissions')}</button>
                   </div>
-                </Link>
-                <div style={{ display: 'flex', gap: 10, marginTop: 8, justifyContent: 'flex-start' }}>
-                  <button className="btn d-flex align-items-center justify-content-center" style={{ border: '2px solid #2997f7', color: '#2997f7', fontWeight: 600, fontSize: '1rem', borderRadius: 7, padding: '0.35rem 1.2rem', background: 'none', minWidth: 90, height: 40 }} onClick={() => handleEdit(course)}>{t('Update')}</button>
-                  <button className="btn d-flex align-items-center justify-content-center" style={{ border: '2px solid #bbb', color: '#444', fontWeight: 600, fontSize: '1rem', borderRadius: 7, padding: '0.35rem 1.2rem', background: 'none', minWidth: 90, height: 40 }}>{t('Analytics')}</button>
-                  <button className="btn d-flex align-items-center justify-content-center" style={{ border: '2px solid #f44336', color: '#f44336', fontWeight: 600, fontSize: '1rem', borderRadius: 7, padding: '0.35rem 1.2rem', background: 'none', minWidth: 90, height: 40 }} onClick={() => handleDelete(course._id)}>{t('Delete')}</button>
-                  <button className="btn btn-sm btn-outline-info me-2" onClick={() => handleViewEnrolled(course._id)}>View Enrolled Students</button>
-                  <button className="btn btn-sm btn-outline-secondary" onClick={() => handleViewQuizzes(course._id)}>View Quiz Submissions</button>
                 </div>
-              </div>
+              ) : (
+                <div className="card dashboard-course-card border-0 shadow-sm h-100 d-flex flex-column bg-warning-subtle align-items-center justify-content-center">
+                  <span className="badge bg-danger">Invalid course data</span>
+                </div>
+              )}
             </div>
           ))}
         </div>

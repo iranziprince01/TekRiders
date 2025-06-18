@@ -15,7 +15,7 @@ import RoleSelect from './pages/RoleSelect'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import Course from './pages/Course'
-import InstructorCourse from './pages/InstructorCourse'
+import InstructorCourse, { EnrolledLearnersPage } from './pages/InstructorCourse'
 
 // Protected Route component
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -48,6 +48,7 @@ function AppRoutes() {
       <Route path="/role-select" element={<RoleSelect />} />
       <Route path="/course/:courseId" element={<Course />} />
       <Route path="/tutor/course/:courseId" element={<InstructorCourse />} />
+      <Route path="/tutor/course/:courseId/enrolled" element={<EnrolledLearnersPage />} />
       <Route 
         path="/learner" 
         element={
