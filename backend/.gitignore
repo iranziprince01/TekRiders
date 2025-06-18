@@ -20,9 +20,10 @@ pids
 *.seed
 *.pid.lock
 
-# Directory for uploaded files
+# Upload directory
+/uploads
 /uploads/*
-!/uploads/.gitkeep
+!uploads/.gitkeep
 
 # Testing
 /coverage
