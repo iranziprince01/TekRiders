@@ -16,6 +16,7 @@ import muhozaImg from '../assets/muhoza.avif';
 const Home = () => {
   const { t } = useTranslation();
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [theme, setTheme] = useState('light');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -164,12 +165,21 @@ const Home = () => {
         <div className="container" style={{position: 'relative', zIndex: 2}}>
           <div className="row align-items-center justify-content-center">
             <div className="col-md-7">
-              <div style={{background: '#fff', borderRadius: 24, boxShadow: '0 4px 32px rgba(56, 189, 248, 0.10)', padding: '2.5rem 2.2rem 2.2rem 2.2rem', position: 'relative', zIndex: 2, borderTop: '6px solid #399ff7'}}>
+              <div style={{
+                background: theme === 'dark' ? '#23272f' : '#fff',
+                borderRadius: 24,
+                boxShadow: theme === 'dark' ? '0 4px 32px rgba(33, 150, 243, 0.13)' : '0 4px 32px rgba(56, 189, 248, 0.10)',
+                padding: '2.5rem 2.2rem 2.2rem 2.2rem',
+                position: 'relative',
+                zIndex: 2,
+                borderTop: theme === 'dark' ? '6px solid #90caf9' : '6px solid #399ff7',
+                color: theme === 'dark' ? '#f5f5f5' : undefined
+              }}>
                 <div className="d-flex align-items-center mb-3">
-                  <span style={{display: 'inline-block', width: 8, height: 36, borderRadius: 6, background: '#399ff7', marginRight: 16}}></span>
-                  <h2 className="section-title mb-0" id="about-title" style={{color: '#399ff7', fontWeight: 800, fontSize: '2.1rem', letterSpacing: '-1px'}}>{t('Education Without Barriers')}</h2>
+                  <span style={{display: 'inline-block', width: 8, height: 36, borderRadius: 6, background: theme === 'dark' ? '#90caf9' : '#399ff7', marginRight: 16}}></span>
+                  <h2 className="section-title mb-0" id="about-title" style={{color: theme === 'dark' ? '#90caf9' : '#399ff7', fontWeight: 800, fontSize: '2.1rem', letterSpacing: '-1px'}}>{t('Education Without Barriers')}</h2>
                 </div>
-                <p className="section-subtitle" style={{fontSize: '1.13rem', color: '#444', marginBottom: '2.2rem', fontWeight: 500, lineHeight: 1.6}}>
+                <p className="section-subtitle" style={{fontSize: '1.13rem', color: theme === 'dark' ? '#b0bec5' : '#444', marginBottom: '2.2rem', fontWeight: 500, lineHeight: 1.6}}>
                   {t('TekRiders is dedicated to breaking down barriers for marginalized youth in Rwanda and beyond. Our mission is to provide accessible, offline, and multilingual digital learning—empowering every learner to reach their full potential, regardless of location, gender, or background.')}
                 </p>
                 <Link to="/login" className="btn btn-primary px-4 py-2" aria-label={t('Learn more about TekRiders')} style={{fontWeight: 700, fontSize: '1.08rem', borderRadius: 10}}>{t('Learn More')}</Link>

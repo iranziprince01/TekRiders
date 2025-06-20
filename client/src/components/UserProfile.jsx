@@ -16,7 +16,8 @@ const UserProfile = () => {
     profession: user?.profession || '',
     address: user?.address || '',
     email: user?.email || '',
-    avatar: user?.avatar || ''
+    avatar: user?.avatar || '',
+    phone: user?.phone || ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -165,10 +166,11 @@ const UserProfile = () => {
         <div className="col-md-9">
           <div className="d-flex flex-column align-items-start">
             <h2 className="mb-1">{form.firstName} {form.middleName} {form.lastName}</h2>
-            <p className="text-muted mb-2">{user?.role}</p>
+            <p className="text-muted mb-2">{user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : ''}</p>
             <p className="mb-3">{form.profession}</p>
             <p className="mb-3">{form.address}</p>
             <p className="mb-3">{form.email}</p>
+            {form.phone && <p className="mb-3">{form.phone}</p>}
           </div>
         </div>
       </div>
@@ -219,6 +221,10 @@ const UserProfile = () => {
             <div className="col-md-6">
               <label className="form-label">{t('Email')}</label>
               <input className="form-control" name="email" value={form.email} onChange={handleChange} required />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label">{t('Phone')}</label>
+              <input className="form-control" name="phone" value={form.phone} onChange={handleChange} />
             </div>
             <div className="col-12">
               <label className="form-label">{t('Profile Picture')}</label>

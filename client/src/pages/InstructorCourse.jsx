@@ -212,16 +212,6 @@ export default function InstructorCourse() {
                 </li>
               ))}
             </ul>
-            <div className="mt-4">
-              <div className="progress" style={{ height: 8 }}>
-                <div
-                  className="progress-bar bg-success"
-                  role="progressbar"
-                  style={{ width: `${lessons.length ? (selectedLesson + 1) / lessons.length * 100 : 0}%` }}
-                />
-              </div>
-              <div className="small text-muted mt-1">Lesson: {selectedLesson + 1} / {lessons.length}</div>
-            </div>
           </div>
         </div>
         {/* Main Content */}

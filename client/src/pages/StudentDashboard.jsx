@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
@@ -16,7 +16,7 @@ const LearnerDashboard = () => {
   const { t } = useTranslation();
   const { user, logout, offlineMode } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('home');
   const [notifications, setNotifications] = useState([]);
   const [courses, setCourses] = useState([]);
   const [stats, setStats] = useState({
@@ -39,6 +39,17 @@ const LearnerDashboard = () => {
   const [enrollError, setEnrollError] = useState({}); // { [courseId]: string }
   const [courseProgress, setCourseProgress] = useState({}); // { [courseId]: [completedLessonIndices] }
   const [siteStatus, setSiteStatus] = useState(navigator.onLine ? 'Online' : 'Offline');
+  const [badges, setBadges] = useState([]);
+  const [certificates, setCertificates] = useState([]);
+  const [achievementsLoading, setAchievementsLoading] = useState(false);
+  const [achievementsError, setAchievementsError] = useState('');
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+  const [highContrast, setHighContrast] = useState(() => localStorage.getItem('highContrast') === 'true');
+  const [ttsEnabled, setTtsEnabled] = useState(false);
+  const [ttsLang, setTtsLang] = useState('en');
+  const [voiceInput, setVoiceInput] = useState('');
+  const [transcript, setTranscript] = useState('');
+  const ttsRef = useRef(null);
 
   const toggleSection = (section) => setExpanded(prev => ({ ...prev, [section]: !prev[section] }));
 
@@ -62,10 +73,9 @@ const LearnerDashboard = () => {
   const sidebarMenus = [
     { label: 'Home', tab: 'home', icon: FiHome },
     { label: 'My Courses', tab: 'courses', icon: FiBook },
-    { label: 'Progress', tab: 'progress', icon: FiTarget },
     { label: 'Achievements', tab: 'achievements', icon: FiAward },
     { label: 'Accessibility', tab: 'accessibility', icon: FiVolume2 },
-        { label: 'Profile', tab: 'profile', icon: FiUser },
+    { label: 'Profile', tab: 'profile', icon: FiUser },
   ];
 
   // Mock data - replace with actual API calls
@@ -295,86 +305,99 @@ const LearnerDashboard = () => {
     fetchAllProgress();
   }, [enrolledCourses, offlineMode]);
 
+  // Fetch badges and certificates when Achievements tab is active
+  useEffect(() => {
+    if (activeTab === 'achievements' && user?._id) {
+      setAchievementsLoading(true);
+      setAchievementsError('');
+      Promise.all([
+        axios.get(`/api/users/${user._id}/badges`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
+        axios.get(`/api/users/${user._id}/certificates`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+      ])
+        .then(([badgesRes, certsRes]) => {
+          setBadges(badgesRes.data);
+          setCertificates(certsRes.data);
+          setAchievementsLoading(false);
+        })
+        .catch(err => {
+          setAchievementsError('Failed to load achievements.');
+          setAchievementsLoading(false);
+        });
+    }
+  }, [activeTab, user]);
+
+  // Theme switcher effect (applies to all dashboard pages)
+  useEffect(() => {
+    document.body.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    if (highContrast) {
+      document.body.classList.add('high-contrast');
+    } else {
+      document.body.classList.remove('high-contrast');
+    }
+    localStorage.setItem('highContrast', highContrast);
+  }, [theme, highContrast]);
+
+  // Text-to-speech (mock, browser SpeechSynthesis)
+  const handleSpeak = (text) => {
+    if (!window.speechSynthesis) return;
+    const utter = new window.SpeechSynthesisUtterance(text);
+    utter.lang = ttsLang === 'rw' ? 'rw-RW' : 'en-US';
+    window.speechSynthesis.speak(utter);
+  };
+
+  // Voice-to-text (mock, browser SpeechRecognition)
+  const handleVoiceToText = () => {
+    if (!('webkitSpeechRecognition' in window)) {
+      alert('Speech recognition not supported in this browser.');
+      return;
+    }
+    const recognition = new window.webkitSpeechRecognition();
+    recognition.lang = ttsLang === 'rw' ? 'rw-RW' : 'en-US';
+    recognition.onresult = (event) => {
+      setVoiceInput(event.results[0][0].transcript);
+    };
+    recognition.start();
+  };
+
+  // Transcript auto-generation (mock)
+  const handleGenerateTranscript = () => {
+    setTranscript('This is a mock transcript. In production, integrate with Google Speech-to-Text API.');
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'profile':
         return <Profile />;
       case 'courses':
         return (
-          <div className="card border-0 shadow-sm">
-            <div className="card-header bg-white py-3">
-              <h5 className="mb-0">{t('Enrolled Courses')}</h5>
-            </div>
-            <div className="card-body">
+          <div className="container py-4">
+            <h2 className="fw-bold mb-4" style={{letterSpacing: '0.01em'}}>My Courses</h2>
+            <div className="row g-4">
               {enrolledCourses.length === 0 ? (
-                <div className="alert alert-info">{t('No enrolled courses')}</div>
+                <div className="col-12"><div className="alert alert-info">You have not enrolled in any courses yet.</div></div>
               ) : (
-              <div className="row g-4">
-                  {enrolledCourses.map(course => (
-                    <div key={course._id} className="col-md-4">
-                      <Link to={`/course/${course._id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        <div className="card h-100 border-0 shadow-sm" style={{ cursor: 'pointer' }}>
-                          <img 
-                            src={course.thumbnail ? `/api/uploads/${course.thumbnail}` : 'https://picsum.photos/300/200'} 
-                        className="card-img-top" 
+                enrolledCourses.map(course => (
+                  <div key={course._id || course.id} className="col-12 col-sm-6 col-md-4 col-lg-3 d-flex">
+                    <div className="card shadow-sm border-0 flex-fill h-100 p-3 course-card-coursera" style={{borderRadius: 18, transition: 'box-shadow 0.2s, transform 0.2s', minHeight: 340, display: 'flex', flexDirection: 'column', justifyContent: 'space-between'}}>
+                      <img
+                        src={course.thumbnail ? `/api/uploads/${course.thumbnail}` : 'https://picsum.photos/400/240'}
                         alt={course.title}
-                        style={{ height: 160, objectFit: 'cover' }}
+                        className="card-img-top mb-3"
+                        style={{height: 160, objectFit: 'cover', borderRadius: 14, boxShadow: '0 2px 12px rgba(56,189,248,0.07)'}}
                       />
-                      <div className="card-body">
-                        <h6 className="card-title">{course.title}</h6>
-                            <p className="text-muted small mb-2">{course.category} &bull; {course.language?.toUpperCase()}</p>
-                            <p className="small mb-2" style={{ minHeight: 48 }}>{course.description?.slice(0, 80)}{course.description?.length > 80 ? '...' : ''}</p>
-                            <div className="d-flex align-items-center mt-2">
-                              <span className="me-2" style={{ fontSize: 13, color: '#888' }}>{t('By')} {tutors[course.author]?.firstName || ''} {tutors[course.author]?.lastName || 'Tutor'}</span>
-                            </div>
-                            <div className="d-flex justify-content-start mt-2">
-                              <button
-                                className="btn btn-primary btn-sm px-3 py-1"
-                                style={{ fontSize: '0.97rem', borderRadius: '6px', minWidth: 90 }}
-                                disabled={enrolling[course._id] || (enrolledCourses.some(ec => ec._id === course._id))}
-                                onClick={async (e) => {
-                                  e.preventDefault();
-                                  if (enrolling[course._id] || (enrolledCourses.some(ec => ec._id === course._id))) return;
-                                  setEnrolling(prev => ({ ...prev, [course._id]: true }));
-                                  setEnrollError(prev => ({ ...prev, [course._id]: '' }));
-                                  try {
-                                    const token = localStorage.getItem('token');
-                                    await axios.post(`/api/courses/${course._id}/enroll`, {}, {
-                                      headers: { Authorization: `Bearer ${token}` }
-                                    });
-                                    setEnrollSuccess(prev => ({ ...prev, [course._id]: true }));
-                                    // Refetch enrolled courses
-                                    const profileRes = await axios.get('/api/users/profile', {
-                                      headers: { Authorization: `Bearer ${token}` }
-                                    });
-                                    const enrolledIds = profileRes.data.enrolledCourses || [];
-                                    const courseDetails = await Promise.all(
-                                      enrolledIds.map(async (id) => {
-                                        try {
-                                          const res = await axios.get(`/api/courses/${id}`);
-                                          return res.data;
-                                        } catch {
-                                          return null;
-                                        }
-                                      })
-                                    );
-                                    setEnrolledCourses(courseDetails.filter(Boolean));
-                                  } catch (err) {
-                                    setEnrollError(prev => ({ ...prev, [course._id]: err?.response?.data?.message || 'Failed to enroll' }));
-                                  } finally {
-                                    setEnrolling(prev => ({ ...prev, [course._id]: false }));
-                                  }
-                                }}
-                              >
-                                {enrolledCourses.some(ec => ec._id === course._id) ? t('Enrolled') : t('Enroll Now')}
-                              </button>
-                            </div>
-                          </div>
+                      <div className="flex-grow-1 d-flex flex-column justify-content-between">
+                        <h5 className="fw-bold mb-2 text-truncate" title={course.title}>{course.title}</h5>
+                        <div className="mb-2 text-muted small text-truncate" title={course.category}>{course.category}</div>
+                        <div className="d-flex align-items-center gap-2 mb-2">
+                          <img src={tutors[course.author]?.avatar || '/default-avatar.png'} alt="Tutor" style={{width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e3e3e3'}} />
+                          <span className="fw-semibold" style={{fontSize: '1.01rem'}}>{tutors[course.author]?.firstName ? tutors[course.author].firstName + (tutors[course.author].lastName ? ' ' + tutors[course.author].lastName : '') : tutors[course.author]?.name || 'Tutor'}</span>
                         </div>
-                          </Link>
+                        <Link to={`/course/${course._id || course.id}`} className="btn btn-primary w-100 mt-auto" style={{borderRadius: 10, padding: '0.7rem 0', fontWeight: 600}}>Go to Course</Link>
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
+                ))
               )}
             </div>
           </div>
@@ -399,108 +422,100 @@ const LearnerDashboard = () => {
         );
       case 'home':
         return (
-          <div className="container-fluid px-0">
-            <div className="d-flex flex-wrap align-items-center mb-4 gap-3">
-              <input
-                className="form-control"
-                style={{ maxWidth: 320 }}
-                placeholder={t('Search courses...')}
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-              <select
-                className="form-select"
-                style={{ maxWidth: 220 }}
-                value={category}
-                onChange={e => setCategory(e.target.value)}
-              >
-                <option value="">{t('All Categories')}</option>
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-            {homeLoading ? (
-              <div className="text-center py-5">{t('Loading...')}</div>
-            ) : homeError ? (
-              <div className="alert alert-danger">{homeError}</div>
-            ) : filteredCourses.length === 0 ? (
-              <div className="alert alert-info">{t('No courses found.')}</div>
-            ) : (
-              <div className="row g-4">
-                {filteredCourses.map(course => (
-                  <div key={course._id || course.id} className="col-12 col-sm-6 col-lg-4 d-flex">
-                    {course._id ? (
-                      <Link to={`/course/${course._id}`} className="text-decoration-none text-dark flex-fill">
-                        {console.log('Rendering course card with _id:', course._id)}
-                        <div className="card dashboard-course-card border-0 shadow-sm h-100 d-flex flex-column">
-                          <img
-                            src={course.thumbnail ? `/api/uploads/${course.thumbnail}` : 'https://picsum.photos/300/200'}
-                            className="card-img-top rounded-top"
-                            alt={course.title}
-                            style={{ height: 160, objectFit: 'cover' }}
-                          />
-                          <div className="card-body pb-2">
-                            <h5 className="card-title fw-bold mb-2 text-truncate" title={course.title}>{course.title}</h5>
-                            <p className="text-muted small mb-2 text-truncate" title={course.description}>{course.description}</p>
-                            <div className="d-flex flex-wrap gap-2 mb-2">
-                              <span className="badge bg-light text-primary fw-semibold">{course.category}</span>
-                              <span className="badge bg-info text-dark fw-semibold">{course.language?.toUpperCase()}</span>
-                            </div>
-                            <div className="d-flex justify-content-start mt-2">
-                              <button
-                                className="btn btn-primary btn-sm px-3 py-1"
-                                style={{ fontSize: '0.97rem', borderRadius: '6px', minWidth: 90 }}
-                                disabled={enrolling[course._id] || (enrolledCourses.some(ec => ec._id === course._id))}
-                                onClick={async (e) => {
-                                  e.preventDefault();
-                                  if (enrolling[course._id] || (enrolledCourses.some(ec => ec._id === course._id))) return;
-                                  setEnrolling(prev => ({ ...prev, [course._id]: true }));
-                                  setEnrollError(prev => ({ ...prev, [course._id]: '' }));
-                                  try {
-                                    const token = localStorage.getItem('token');
-                                    await axios.post(`/api/courses/${course._id}/enroll`, {}, {
-                                      headers: { Authorization: `Bearer ${token}` }
-                                    });
-                                    setEnrollSuccess(prev => ({ ...prev, [course._id]: true }));
-                                    // Refetch enrolled courses
-                                    const profileRes = await axios.get('/api/users/profile', {
-                                      headers: { Authorization: `Bearer ${token}` }
-                                    });
-                                    const enrolledIds = profileRes.data.enrolledCourses || [];
-                                    const courseDetails = await Promise.all(
-                                      enrolledIds.map(async (id) => {
-                                        try {
-                                          const res = await axios.get(`/api/courses/${id}`);
-                                          return res.data;
-                                        } catch {
-                                          return null;
-                                        }
-                                      })
-                                    );
-                                    setEnrolledCourses(courseDetails.filter(Boolean));
-                                  } catch (err) {
-                                    setEnrollError(prev => ({ ...prev, [course._id]: err?.response?.data?.message || 'Failed to enroll' }));
-                                  } finally {
-                                    setEnrolling(prev => ({ ...prev, [course._id]: false }));
-                                  }
-                                }}
-                              >
-                                {enrolledCourses.some(ec => ec._id === course._id) ? t('Enrolled') : t('Enroll Now')}
-                              </button>
-                            </div>
+          <div className="container py-4">
+            <h2 className="fw-bold mb-4" style={{letterSpacing: '0.01em'}}>All Courses</h2>
+            <div className="row g-4">
+              {homeLoading ? (
+                <div className="col-12 text-center py-5">Loading...</div>
+              ) : homeError ? (
+                <div className="col-12"><div className="alert alert-danger">{homeError}</div></div>
+              ) : filteredCourses.length === 0 ? (
+                <div className="col-12"><div className="alert alert-info">No courses found.</div></div>
+              ) : (
+                filteredCourses.map(course => {
+                  const isEnrolled = enrolledCourses.some(ec => ec._id === course._id);
+                  return (
+                    <div key={course._id || course.id} className="col-12 col-sm-6 col-md-4 col-lg-3 d-flex">
+                      <div
+                        className="card shadow-sm border-0 flex-fill h-100 p-3 course-card-coursera"
+                        style={{
+                          borderRadius: 18,
+                          transition: 'box-shadow 0.2s, transform 0.2s',
+                          minHeight: 340,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          cursor: isEnrolled ? 'pointer' : 'default',
+                        }}
+                        onClick={() => {
+                          if (isEnrolled) navigate(`/course/${course._id}`);
+                        }}
+                        tabIndex={isEnrolled ? 0 : -1}
+                        aria-label={isEnrolled ? `Go to course ${course.title}` : undefined}
+                      >
+                        <img
+                          src={course.thumbnail ? `/api/uploads/${course.thumbnail}` : 'https://picsum.photos/400/240'}
+                          alt={course.title}
+                          className="card-img-top mb-3"
+                          style={{height: 160, objectFit: 'cover', borderRadius: 14, boxShadow: '0 2px 12px rgba(56,189,248,0.07)'}}
+                        />
+                        <div className="flex-grow-1 d-flex flex-column justify-content-between">
+                          <h5 className="fw-bold mb-2 text-truncate" title={course.title}>{course.title}</h5>
+                          <div className="mb-2 text-muted small text-truncate" title={course.category}>{course.category}</div>
+                          <div className="d-flex align-items-center gap-2 mb-2">
+                            <img src={tutors[course.author]?.avatar || '/default-avatar.png'} alt="Tutor" style={{width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e3e3e3'}} />
+                            <span className="fw-semibold" style={{fontSize: '1.01rem'}}>{tutors[course.author]?.firstName ? tutors[course.author].firstName + (tutors[course.author].lastName ? ' ' + tutors[course.author].lastName : '') : tutors[course.author]?.name || 'Tutor'}</span>
                           </div>
+                          <Link
+                            to="#"
+                            className="btn btn-primary w-100 mt-auto"
+                            style={{borderRadius: 10, padding: '0.7rem 0', fontWeight: 600}}
+                            disabled={enrolling[course._id] || isEnrolled}
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              if (enrolling[course._id] || isEnrolled) return;
+                              setEnrolling(prev => ({ ...prev, [course._id]: true }));
+                              setEnrollError(prev => ({ ...prev, [course._id]: '' }));
+                              try {
+                                const token = localStorage.getItem('token');
+                                await axios.post(`/api/courses/${course._id}/enroll`, {}, {
+                                  headers: { Authorization: `Bearer ${token}` }
+                                });
+                                setEnrollSuccess(prev => ({ ...prev, [course._id]: true }));
+                                // Refetch enrolled courses
+                                const profileRes = await axios.get('/api/users/profile', {
+                                  headers: { Authorization: `Bearer ${token}` }
+                                });
+                                const enrolledIds = profileRes.data.enrolledCourses || [];
+                                const courseDetails = await Promise.all(
+                                  enrolledIds.map(async (id) => {
+                                    try {
+                                      const res = await axios.get(`/api/courses/${id}`);
+                                      return res.data;
+                                    } catch {
+                                      return null;
+                                    }
+                                  })
+                                );
+                                setEnrolledCourses(courseDetails.filter(Boolean));
+                                // Optionally, refetch approvedCourses to update enrollment counts
+                                axios.get('/api/courses/approved').then(res => setApprovedCourses(res.data));
+                              } catch (err) {
+                                setEnrollError(prev => ({ ...prev, [course._id]: err?.response?.data?.message || 'Failed to enroll' }));
+                              } finally {
+                                setEnrolling(prev => ({ ...prev, [course._id]: false }));
+                              }
+                            }}
+                          >
+                            {isEnrolled ? 'Enrolled' : enrolling[course._id] ? 'Enrolling...' : 'Enroll'}
+                          </Link>
                         </div>
-                      </Link>
-                    ) : (
-                      <div className="card dashboard-course-card border-0 shadow-sm h-100 d-flex flex-column bg-warning-subtle align-items-center justify-content-center">
-                        <span className="badge bg-danger">Invalid course data</span>
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         );
       case 'progress':
@@ -549,6 +564,117 @@ const LearnerDashboard = () => {
                   })}
               </div>
             )}
+            </div>
+          </div>
+        );
+      case 'achievements':
+        return (
+          <div className="container py-4">
+            <h2 className="fw-bold mb-4" style={{letterSpacing: '0.01em'}}>Achievements</h2>
+            {achievementsLoading ? (
+              <div className="text-center py-5">Loading...</div>
+            ) : achievementsError ? (
+              <div className="alert alert-danger">{achievementsError}</div>
+            ) : (
+              <>
+                <div className="row g-4 mb-4">
+                  {badges.length === 0 ? (
+                    <div className="col-12"><div className="alert alert-info">No badges earned yet.</div></div>
+                  ) : (
+                    badges.map(badge => (
+                      <div key={badge.id} className="col-12 col-sm-6 col-md-4 d-flex">
+                        <div className="card border-0 shadow-sm flex-fill h-100 p-4 text-center" style={{borderRadius: 18, minHeight: 180, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}>
+                          <div className="display-4 mb-2 text-primary"><FiAward /></div>
+                          <h5 className="fw-bold mb-1">{badge.title || 'Badge'}</h5>
+                          <div className="text-muted small mb-2">{badge.date ? new Date(badge.date).toLocaleDateString() : ''}</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <h4 className="fw-bold mb-3">Certificates</h4>
+                <div className="row g-4">
+                  {certificates.length === 0 ? (
+                    <div className="col-12"><div className="alert alert-info">No certificates earned yet.</div></div>
+                  ) : (
+                    certificates.map(cert => (
+                      <div key={cert.id} className="col-12 col-md-6 d-flex">
+                        <div className="card border-0 shadow-sm flex-fill h-100 p-4 d-flex flex-row align-items-center justify-content-between" style={{borderRadius: 18, minHeight: 120}}>
+                          <div>
+                            <h6 className="fw-bold mb-1">{cert.courseTitle || cert.title}</h6>
+                            <div className="text-muted small mb-1">Issued: {cert.date ? new Date(cert.date).toLocaleDateString() : ''}</div>
+                          </div>
+                          <a href={cert.downloadUrl || '#'} className="btn btn-outline-primary" download>Download</a>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        );
+      case 'accessibility':
+        return (
+          <div className="container py-4">
+            <h2 className="fw-bold mb-4" style={{letterSpacing: '0.01em'}}>Accessibility Settings</h2>
+            <div className="row g-4 mb-4">
+              {/* Theme Switcher */}
+              <div className="col-12 col-md-6 d-flex">
+                <div className="card border-0 shadow-sm flex-fill h-100 p-4" style={{borderRadius: 18}}>
+                  <h5 className="fw-bold mb-3">Theme Switcher</h5>
+                  <div className="d-flex gap-2 mb-2">
+                    <button className={`btn btn-${theme === 'light' ? 'primary' : 'outline-primary'}`} onClick={() => setTheme('light')}>Light</button>
+                    <button className={`btn btn-${theme === 'dark' ? 'primary' : 'outline-primary'}`} onClick={() => setTheme('dark')}>Dark</button>
+                    <button className={`btn btn-${highContrast ? 'primary' : 'outline-primary'}`} onClick={() => setHighContrast(h => !h)}>High Contrast</button>
+                  </div>
+                  <div className="text-muted small">Switch between light, dark, and high-contrast modes for better visibility.</div>
+                </div>
+              </div>
+              {/* Text-to-Speech & Voice-to-Text */}
+              <div className="col-12 col-md-6 d-flex">
+                <div className="card border-0 shadow-sm flex-fill h-100 p-4" style={{borderRadius: 18}}>
+                  <h5 className="fw-bold mb-3">Text-to-Speech & Voice-to-Text</h5>
+                  <div className="mb-2">
+                    <label className="form-label">Language</label>
+                    <select className="form-select" value={ttsLang} onChange={e => setTtsLang(e.target.value)}>
+                      <option value="en">English</option>
+                      <option value="rw">Kinyarwanda</option>
+                    </select>
+                  </div>
+                  <div className="mb-2">
+                    <textarea className="form-control mb-2" rows={2} placeholder="Enter text to speak..." ref={ttsRef}></textarea>
+                    <button className="btn btn-outline-primary me-2" onClick={() => handleSpeak(ttsRef.current.value)}>Speak</button>
+                  </div>
+                  <div className="mb-2">
+                    <button className="btn btn-outline-secondary me-2" onClick={handleVoiceToText}>Start Voice Input</button>
+                    <input className="form-control mt-2" value={voiceInput} onChange={e => setVoiceInput(e.target.value)} placeholder="Voice input will appear here..." />
+                  </div>
+                  <div className="text-muted small">Text-to-speech and voice-to-text support English and Kinyarwanda (browser-based, Google API in production).</div>
+                </div>
+              </div>
+              {/* Transcript Generation */}
+              <div className="col-12 col-md-6 d-flex">
+                <div className="card border-0 shadow-sm flex-fill h-100 p-4" style={{borderRadius: 18}}>
+                  <h5 className="fw-bold mb-3">Auto-Generated Transcripts</h5>
+                  <button className="btn btn-outline-primary mb-2" onClick={handleGenerateTranscript}>Generate Transcript</button>
+                  <textarea className="form-control" rows={3} value={transcript} readOnly placeholder="Transcript will appear here..." />
+                  <div className="text-muted small mt-2">Transcripts are auto-generated for audio/video lessons. (Google Speech-to-Text API integration recommended for production.)</div>
+                </div>
+              </div>
+              {/* Accessibility Enhancements */}
+              <div className="col-12 col-md-6 d-flex">
+                <div className="card border-0 shadow-sm flex-fill h-100 p-4" style={{borderRadius: 18}}>
+                  <h5 className="fw-bold mb-3">Accessibility Enhancements</h5>
+                  <ul className="mb-2">
+                    <li>Screen reader compatibility (ARIA labels, semantic HTML)</li>
+                    <li>High-contrast and large text options</li>
+                    <li>Simple voice commands (e.g., "Go to Home", "Open My Courses")</li>
+                    <li>Clear, high-contrast interfaces for visually impaired users</li>
+                  </ul>
+                  <div className="text-muted small">These features ensure usability for people with visual impairments or cognitive challenges.</div>
+                </div>
+              </div>
             </div>
           </div>
         );

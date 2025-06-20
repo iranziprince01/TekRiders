@@ -325,7 +325,45 @@ router.post('/:id/progress', isAuth, async (req, res) => {
       user.courseProgress[req.params.id].push(lessonIndex);
       await db.users.insert(user);
     }
-    res.json({ success: true, completed: user.courseProgress[req.params.id] });
+    // Check if all lessons are completed
+    const course = await db.courses.get(req.params.id);
+    const totalLessons = Array.isArray(course.content) ? course.content.length : 0;
+    const completedLessons = user.courseProgress[req.params.id].length;
+    let newBadge = null;
+    let newCertificate = null;
+    if (totalLessons > 0 && completedLessons === totalLessons) {
+      // Only add if not already present
+      if (!user.certificates) user.certificates = [];
+      if (!user.badges) user.badges = [];
+      const alreadyHasCert = user.certificates.some(c => c.courseId === course._id);
+      if (!alreadyHasCert) {
+        // Generate certificate
+        const certId = 'cert-' + course._id + '-' + user._id + '-' + Date.now();
+        newCertificate = {
+          id: certId,
+          courseId: course._id,
+          courseTitle: course.title,
+          learnerId: user._id,
+          learnerName: user.firstName ? user.firstName + (user.lastName ? ' ' + user.lastName : '') : user.email,
+          date: new Date().toISOString(),
+          downloadUrl: `/api/certificates/${certId}.pdf` // Placeholder, implement PDF generation later
+        };
+        user.certificates.push(newCertificate);
+      }
+      const alreadyHasBadge = user.badges.some(b => b.courseId === course._id && b.type === 'completion');
+      if (!alreadyHasBadge) {
+        newBadge = {
+          id: 'badge-' + course._id + '-' + user._id + '-' + Date.now(),
+          courseId: course._id,
+          type: 'completion',
+          title: `Completed ${course.title}`,
+          date: new Date().toISOString()
+        };
+        user.badges.push(newBadge);
+      }
+      await db.users.insert(user);
+    }
+    res.json({ success: true, completed: user.courseProgress[req.params.id], newBadge, newCertificate });
   } catch (err) {
     res.status(500).json({ message: 'Error saving progress', error: err.message });
   }

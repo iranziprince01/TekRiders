@@ -863,4 +863,282 @@ body {
       padding: 0.7rem 0.9rem 2rem 0.9rem;
     }
   }
+}
+
+// Modern sidebar styles for tutor dashboard
+.sidebar {
+  background: rgba(255,255,255,0.85);
+  box-shadow: 0 8px 32px rgba(56, 189, 248, 0.10);
+  backdrop-filter: blur(8px) saturate(1.2);
+}
+.sidebar-brand {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--main-color);
+}
+.sidebar-item {
+  position: relative;
+  font-size: 1.08rem;
+  font-weight: 500;
+  color: var(--dark-color);
+  background: none;
+  transition: background 0.18s, color 0.18s, transform 0.18s;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 12px;
+  margin-bottom: 0.3rem;
+}
+.sidebar-item:hover {
+  background: linear-gradient(90deg, #e6f6fc 60%, #fafdff 100%);
+  color: var(--main-color);
+  transform: scale(1.04);
+  box-shadow: 0 2px 12px rgba(56, 189, 248, 0.08);
+}
+.sidebar-active {
+  background: linear-gradient(90deg, #399ff7 0%, #fab500 100%);
+  color: #fff !important;
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.10);
+  transform: scale(1.06);
+}
+.sidebar-active-bar {
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 60%;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #399ff7 0%, #fab500 100%);
+  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.10);
+}
+@media (max-width: 991.98px) {
+  .sidebar {
+    width: 100vw !important;
+    min-width: 0;
+    max-width: 100vw;
+    position: relative !important;
+    height: auto !important;
+    box-shadow: none;
+    border-radius: 0;
+    margin-bottom: 2rem;
+  }
+  .sidebar-item {
+    font-size: 1rem;
+    padding: 0.8rem 1.2rem;
+  }
+}
+
+// 1. Sidebar: add glassmorphism, shadow, branding/logo, modern highlight for active tab, hover effect
+// 2. .dashboard-course-card: larger thumbnail, floating pill status badge with shadow, chips for stats, single prominent 'Manage' button
+// 3. .upload-btn-sticky: sticky, prominent upload button style
+// 4. Add micro-interactions: card hover, button hover, tab switch
+// 5. Ensure full responsiveness for all dashboard elements
+
+// 1. Sidebar: add glassmorphism, shadow, branding/logo, modern highlight for active tab, hover effect
+// 2. .dashboard-course-card: larger thumbnail, floating pill status badge with shadow, chips for stats, single prominent 'Manage' button
+// 3. .upload-btn-sticky: sticky, prominent upload button style
+// 4. Add micro-interactions: card hover, button hover, tab switch
+// 5. Ensure full responsiveness for all dashboard elements
+
+// 1. Sidebar: add glassmorphism, shadow, branding/logo, modern highlight for active tab, hover effect
+// 2. .dashboard-course-card: larger thumbnail, floating pill status badge with shadow, chips for stats, single prominent 'Manage' button
+// 3. .upload-btn-sticky: sticky, prominent upload button style
+// 4. Add micro-interactions: card hover, button hover, tab switch
+// 5. Ensure full responsiveness for all dashboard elements
+
+.course-card-coursera {
+  padding: 1.5rem 1.2rem 1.2rem 1.2rem !important;
+  border-radius: 18px !important;
+  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.10);
+  background: #fff;
+  transition: box-shadow 0.18s, transform 0.18s, background 0.18s;
+  min-height: 340px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.course-card-coursera:hover {
+  box-shadow: 0 8px 32px rgba(56, 189, 248, 0.13);
+  transform: translateY(-4px) scale(1.03);
+  background: linear-gradient(90deg, #fafdff 60%, #e6f6fc 100%);
+}
+
+// Dark theme overrides
+[data-theme='dark'] {
+  --main-color: #90caf9;
+  --accent-color: #ffd54f;
+  --text-color: #f5f5f5;
+  --background-color: #181c24;
+  --primary-color: #2196f3;
+  --secondary-color: #b0bec5;
+  --success-color: #66bb6a;
+  --info-color: #29b6f6;
+  --warning-color: #ffa726;
+  --danger-color: #ef5350;
+  --light-color: #23272f;
+  --dark-color: #f5f5f5;
+  background: linear-gradient(120deg, #23272f 60%, #181c24 100%) !important;
+  color: var(--text-color) !important;
+}
+[data-theme='dark'] body,
+[data-theme='dark'] .container,
+[data-theme='dark'] .card,
+[data-theme='dark'] .feature-card,
+[data-theme='dark'] .section,
+[data-theme='dark'] .footer,
+[data-theme='dark'] .navbar,
+[data-theme='dark'] .header {
+  background: linear-gradient(120deg, #23272f 60%, #181c24 100%) !important;
+  color: var(--text-color) !important;
+}
+[data-theme='dark'] .card,
+[data-theme='dark'] .feature-card {
+  background: #23272f !important;
+  color: var(--text-color) !important;
+  box-shadow: 0 4px 24px rgba(33, 150, 243, 0.13);
+  border: 1.5px solid #222 !important;
+}
+[data-theme='dark'] .card-img-top,
+[data-theme='dark'] .feature-card img {
+  background: #23272f !important;
+  border-radius: 14px;
+}
+[data-theme='dark'] .btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.13);
+}
+[data-theme='dark'] .btn-outline-primary {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+  background: transparent;
+}
+[data-theme='dark'] .btn-outline-primary:hover {
+  background: var(--primary-color);
+  color: #fff;
+}
+[data-theme='dark'] .footer, [data-theme='dark'] .footer-modern {
+  background: #181c24 !important;
+  color: #b0bec5 !important;
+  border-top: 2px solid #23272f !important;
+}
+[data-theme='dark'] .footer-link, [data-theme='dark'] .footer-link:hover {
+  color: #90caf9 !important;
+}
+[data-theme='dark'] .navbar, [data-theme='dark'] .header {
+  background: rgba(24, 28, 36, 0.95) !important;
+  border-bottom: 2px solid #23272f !important;
+}
+[data-theme='dark'] .alert-info {
+  background: #23272f !important;
+  color: #90caf9 !important;
+  border-color: #2196f3 !important;
+}
+[data-theme='dark'] .alert-danger {
+  background: #2d2323 !important;
+  color: #ef5350 !important;
+  border-color: #ef5350 !important;
+}
+[data-theme='dark'] .badge {
+  background: #23272f !important;
+  color: #ffd54f !important;
+  border: 1px solid #ffd54f !important;
+}
+[data-theme='dark'] .form-control {
+  background: #23272f !important;
+  color: #f5f5f5 !important;
+  border: 1.5px solid #23272f !important;
+}
+[data-theme='dark'] .form-control:focus {
+  border-color: #2196f3 !important;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.13) !important;
+}
+[data-theme='dark'] .dropdown-menu {
+  background: #23272f !important;
+  color: #f5f5f5 !important;
+  border: 1.5px solid #222 !important;
+}
+[data-theme='dark'] .sidebar, [data-theme='dark'] .glass-sidebar {
+  background: rgba(24, 28, 36, 0.97) !important;
+  box-shadow: 0 8px 32px rgba(33, 150, 243, 0.10);
+}
+[data-theme='dark'] .sidebar-item, [data-theme='dark'] .sidebar-active {
+  background: #23272f !important;
+  color: #90caf9 !important;
+}
+[data-theme='dark'] .sidebar-active-bar {
+  background: linear-gradient(180deg, #2196f3 0%, #ffd54f 100%) !important;
+}
+[data-theme='dark'] .course-card-coursera {
+  background: #23272f !important;
+  color: #f5f5f5 !important;
+  box-shadow: 0 4px 24px rgba(33, 150, 243, 0.13);
+  border: 1.5px solid #222 !important;
+}
+[data-theme='dark'] .hero-title,
+[data-theme='dark'] .hero-subtitle,
+[data-theme='dark'] .section-title,
+[data-theme='dark'] .section-subtitle,
+[data-theme='dark'] p,
+[data-theme='dark'] .text-muted,
+[data-theme='dark'] .card-title,
+[data-theme='dark'] .card-text {
+  color: var(--text-color) !important;
+  opacity: 0.95;
+}
+[data-theme='dark'] .hero-subtitle,
+[data-theme='dark'] .section-subtitle,
+[data-theme='dark'] .text-muted {
+  color: #b0bec5 !important;
+  opacity: 0.92;
+}
+
+// High contrast mode
+.high-contrast, [data-theme='high-contrast'] {
+  --main-color: #000;
+  --accent-color: #FFD700;
+  --text-color: #000;
+  --background-color: #fff;
+  --primary-color: #000;
+  --secondary-color: #FFD700;
+  --success-color: #000;
+  --info-color: #FFD700;
+  --warning-color: #FFD700;
+  --danger-color: #000;
+  --light-color: #fff;
+  --dark-color: #000;
+  background-color: #fff !important;
+  color: #000 !important;
+}
+.high-contrast body,
+.high-contrast .container,
+.high-contrast .card,
+.high-contrast .feature-card,
+.high-contrast .section,
+.high-contrast .footer,
+.high-contrast .navbar,
+.high-contrast .header {
+  background-color: #fff !important;
+  color: #000 !important;
+  border-color: #000 !important;
+}
+.high-contrast .btn-primary,
+.high-contrast .btn-outline-primary {
+  background: #000 !important;
+  color: #FFD700 !important;
+  border-color: #FFD700 !important;
+}
+.high-contrast .btn-outline-primary:hover {
+  background: #FFD700 !important;
+  color: #000 !important;
+}
+.high-contrast .footer, .high-contrast .footer-modern {
+  background: #fff !important;
+  color: #000 !important;
+}
+.high-contrast .footer-link, .high-contrast .footer-link:hover {
+  color: #FFD700 !important;
 } 

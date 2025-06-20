@@ -8,6 +8,9 @@ class User {
     this.role = data.role;
     this.type = 'user';
     this.createdAt = new Date().toISOString();
+    this.phone = data.phone || '';
+    this.badges = data.badges || [];
+    this.certificates = data.certificates || [];
   }
 
   static async findByEmail(email) {
